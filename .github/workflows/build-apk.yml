@@ -28,10 +28,51 @@ jobs:
 
       - name: Extract ZIP
         run: |
-          ZIP=$(find . -maxdepth 1 -iname '*.zip' -print -quit)
-          test -n "$ZIP"
-          mkdir project
-          unzip -q "$ZIP" -d project
+          ZIP=$(find . -maxdepth 1 -type f -iname '*.zip' -print -quit)
+          if [ -z "$ZIP" ]; then
+            echo "ERROR: ZIP not found"
+            exit 1
+          fi
+          mkdir -p project
+          unzip -oq "$ZIP" -d project
+
+      - name: Remove BOM from Java files
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          root = Path("project/MatreshkaTruckHelper")
+          if not root.exists():
+              raise SystemExit("ERROR: Project folder not found")
+
+          fixed = 0
+          for file in root.rglob("*.java"):
+              data = file.read_bytes()
+              if data.startswith(b"\xef\xbb\xbf"):
+                  file.write_bytes(data[3:])
+                  print("BOM removed:", file)
+                  fixed += 1
+
+          print("Files fixed:", fixed)
+          PY
+
+      - name: Verify Java files
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          root = Path("project/MatreshkaTruckHelper")
+          bad = [
+              str(f) for f in root.rglob("*.java")
+              if f.read_bytes().startswith(b"\xef\xbb\xbf")
+          ]
+
+          if bad:
+              print("BOM STILL FOUND:", *bad, sep="\n")
+              raise SystemExit(1)
+
+          print("SUCCESS: ALL JAVA FILES ARE CLEAN")
+          PY
 
       - name: Build APK
         run: |
@@ -43,3 +84,4 @@ jobs:
         with:
           name: Matreshka-Truck-Helper-APK
           path: project/MatreshkaTruckHelper/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
