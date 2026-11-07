@@ -773,3 +773,973 @@ public class MainActivity extends Activity {
             .setPositiveButton("Отлично", null)
             .show();
     }
+    private static final class DailyMetrics {
+        long earned;
+        long rounds;
+        long duration;
+    }
+
+    private long dayStart(long time) {
+        Calendar c = Calendar.getInstance();
+        c.setTimeInMillis(time);
+        c.set(Calendar.HOUR_OF_DAY, 0);
+        c.set(Calendar.MINUTE, 0);
+        c.set(Calendar.SECOND, 0);
+        c.set(Calendar.MILLISECOND, 0);
+        return c.getTimeInMillis();
+    }
+
+    private long nextDayStart(long start) {
+        Calendar c = Calendar.getInstance();
+        c.setTimeInMillis(start);
+        c.add(Calendar.DAY_OF_YEAR, 1);
+        return c.getTimeInMillis();
+    }
+
+    private ArrayList<Long> getAvailableDays() {
+        TreeSet<Long> set = new TreeSet<>(Collections.reverseOrder());
+        set.add(dayStart(System.currentTimeMillis()));
+        Cursor cursor = null;
+
+        try {
+            cursor = repository.getTripsHistory();
+            if (cursor != null) {
+                int timeColumn = cursor.getColumnIndexOrThrow("created_at");
+
+                while (cursor.moveToNext()) {
+                    long time = cursor.getLong(timeColumn);
+                    if (time > 0) set.add(dayStart(time));
+                }
+            }
+        } catch (Exception ignored) {
+        } finally {
+            if (cursor != null) cursor.close();
+        }
+
+        return new ArrayList<>(set);
+    }
+
+    private DailyMetrics calculateDailyMetrics(long selectedDay) {
+        DailyMetrics result = new DailyMetrics();
+
+        long end = nextDayStart(selectedDay);
+        long earnedReset = repository.getDailyMetricReset(selectedDay, "earned");
+        long roundsReset = repository.getDailyMetricReset(selectedDay, "rounds");
+        long durationReset = repository.getDailyMetricReset(selectedDay, "duration");
+
+        Cursor cursor = null;
+
+        try {
+            cursor = repository.getTripsHistory();
+
+            if (cursor != null) {
+                int amountColumn = cursor.getColumnIndexOrThrow("amount");
+                int timeColumn = cursor.getColumnIndexOrThrow("created_at");
+                int durationColumn = cursor.getColumnIndexOrThrow("duration");
+
+                while (cursor.moveToNext()) {
+                    long time = cursor.getLong(timeColumn);
+
+                    if (time < selectedDay || time >= end) continue;
+
+                    long amount = cursor.getLong(amountColumn);
+                    long duration = Math.max(0L, cursor.getLong(durationColumn));
+
+                    if (time >= earnedReset) {
+                        result.earned = safeAdd(result.earned, amount);
+                    }
+
+                    if (time >= roundsReset) {
+                        result.rounds = safeAdd(result.rounds, 1L);
+                    }
+
+                    if (time >= durationReset) {
+                        result.duration = safeAdd(result.duration, duration);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Toast.makeText(
+                this,
+                "Не удалось загрузить показатели выбранного дня",
+                Toast.LENGTH_SHORT
+            ).show();
+        } finally {
+            if (cursor != null) cursor.close();
+        }
+
+        return result;
+    }
+
+    private void updateDailyMetricsView(
+            LinearLayout target,
+            long selectedDay
+    ) {
+        target.removeAllViews();
+
+        DailyMetrics values = calculateDailyMetrics(selectedDay);
+
+        target.addView(text(
+            "Заработок: " + money(values.earned) + " ₽",
+            15, accent(), true
+        ));
+
+        target.addView(text(
+            "Количество кругов: " + values.rounds,
+            14, fg(), false
+        ));
+
+        target.addView(text(
+            "Время рейсов: " + formatTime(values.duration),
+            14, fg(), false
+        ));
+
+        target.addView(text(
+            "Сброс меняет только выбранные показатели за эту дату. " +
+            "История рейсов и график остаются целыми.",
+            12, muted(), false
+        ));
+    }
+
+    private void showDailyResetDialog(long selectedDay) {
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(1);
+        box.setPadding(dp(18), dp(8), dp(18), 0);
+
+        CheckBox earned = new CheckBox(this);
+        earned.setText("Сбросить заработок за день");
+        earned.setTextColor(fg());
+        box.addView(earned);
+
+        CheckBox rounds = new CheckBox(this);
+        rounds.setText("Сбросить количество кругов");
+        rounds.setTextColor(fg());
+        box.addView(rounds);
+
+        CheckBox duration = new CheckBox(this);
+        duration.setText("Сбросить время рейсов");
+        duration.setTextColor(fg());
+        box.addView(duration);
+
+        String date = new SimpleDateFormat(
+            "dd.MM.yyyy",
+            Locale.getDefault()
+        ).format(new Date(selectedDay));
+
+        new AlertDialog.Builder(this)
+            .setTitle("Сброс показателей за " + date)
+            .setMessage(
+                "Отметь только те показатели, которые нужно обнулить. " +
+                "Записи, общий баланс и график не удаляются."
+            )
+            .setView(box)
+            .setNegativeButton("Отмена", null)
+            .setPositiveButton("Сбросить выбранное", (dialog, which) -> {
+                ArrayList<String> metrics = new ArrayList<>();
+
+                if (earned.isChecked()) metrics.add("earned");
+                if (rounds.isChecked()) metrics.add("rounds");
+                if (duration.isChecked()) metrics.add("duration");
+
+                if (metrics.isEmpty()) {
+                    Toast.makeText(
+                        this,
+                        "Сначала выбери показатели",
+                        Toast.LENGTH_SHORT
+                    ).show();
+                    return;
+                }
+
+                boolean saved = repository.saveDailyMetricResets(
+                    selectedDay,
+                    metrics,
+                    System.currentTimeMillis()
+                );
+
+                if (!saved) {
+                    Toast.makeText(
+                        this,
+                        "Не удалось сохранить сброс. История не изменена.",
+                        Toast.LENGTH_LONG
+                    ).show();
+                    return;
+                }
+
+                selectedStatsDay = selectedDay;
+
+                Toast.makeText(
+                    this,
+                    "Выбранные показатели сброшены. История сохранена.",
+                    Toast.LENGTH_SHORT
+                ).show();
+
+                renderPage();
+            })
+            .show();
+    }
+
+    private void showDailyMetricsSelector() {
+        LinearLayout cardView = card();
+
+        cardView.addView(text(
+            "СТАТИСТИКА ПО ДНЯМ",
+            14, fg(), true
+        ));
+
+        cardView.addView(text(
+            "Выбери дату, чтобы посмотреть или сбросить отдельные показатели.",
+            12, muted(), false
+        ));
+
+        ArrayList<Long> days = getAvailableDays();
+        ArrayList<String> labels = new ArrayList<>();
+
+        SimpleDateFormat format = new SimpleDateFormat(
+            "dd.MM.yyyy, EEE",
+            Locale.getDefault()
+        );
+
+        int selectedIndex = 0;
+        long today = dayStart(System.currentTimeMillis());
+
+        for (int i = 0; i < days.size(); i++) {
+            long d = days.get(i);
+            labels.add(format.format(new Date(d)));
+
+            if (selectedStatsDay == d) {
+                selectedIndex = i;
+            }
+        }
+
+        if (selectedStatsDay == 0 || !days.contains(selectedStatsDay)) {
+            selectedStatsDay = today;
+            selectedIndex = days.indexOf(today);
+        }
+
+        Spinner selector = new Spinner(this);
+
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(
+            this,
+            android.R.layout.simple_spinner_item,
+            labels
+        );
+
+        adapter.setDropDownViewResource(
+            android.R.layout.simple_spinner_dropdown_item
+        );
+
+        selector.setAdapter(adapter);
+        selector.setSelection(Math.max(0, selectedIndex));
+
+        LinearLayout.LayoutParams spinnerParams =
+            new LinearLayout.LayoutParams(-1, dp(48));
+
+        spinnerParams.topMargin = dp(8);
+        cardView.addView(selector, spinnerParams);
+
+        LinearLayout values = new LinearLayout(this);
+        values.setOrientation(1);
+
+        LinearLayout.LayoutParams valuesParams =
+            new LinearLayout.LayoutParams(-1, -2);
+
+        valuesParams.topMargin = dp(10);
+        cardView.addView(values, valuesParams);
+
+        Button reset = button(
+            "СБРОСИТЬ ВЫБРАННЫЕ ПОКАЗАТЕЛИ ДНЯ",
+            cardColor()
+        );
+
+        LinearLayout.LayoutParams resetParams =
+            new LinearLayout.LayoutParams(-1, dp(46));
+
+        resetParams.topMargin = dp(10);
+        cardView.addView(reset, resetParams);
+
+        final long[] chosenDay = new long[]{selectedStatsDay};
+
+        updateDailyMetricsView(values, chosenDay[0]);
+
+        selector.setOnItemSelectedListener(
+            new AdapterView.OnItemSelectedListener() {
+                @Override
+                public void onItemSelected(
+                        AdapterView<?> parent,
+                        View view,
+                        int position,
+                        long id
+                ) {
+                    if (position >= 0 && position < days.size()) {
+                        chosenDay[0] = days.get(position);
+                        selectedStatsDay = chosenDay[0];
+
+                        updateDailyMetricsView(
+                            values,
+                            chosenDay[0]
+                        );
+                    }
+                }
+
+                @Override
+                public void onNothingSelected(AdapterView<?> parent) {}
+            }
+        );
+
+        reset.setOnClickListener(
+            v -> showDailyResetDialog(chosenDay[0])
+        );
+    }
+
+    private void showStats() {
+        heading(
+            "Статистика",
+            "Результаты, рекорды и показатели по выбранным дням"
+        );
+
+        long todayStart = dayStart(System.currentTimeMillis());
+
+        Calendar weekCalendar = Calendar.getInstance();
+        weekCalendar.setTimeInMillis(todayStart);
+        weekCalendar.add(Calendar.DAY_OF_YEAR, -6);
+
+        long weekStart = weekCalendar.getTimeInMillis();
+
+        long totalAmount = 0;
+        long totalCount = 0;
+        long bestDay = 0;
+        long bestDayTime = 0;
+
+        HashMap<Long, Long> rawDaily = new HashMap<>();
+        HashMap<Long, DailyMetrics> adjustedDaily = new HashMap<>();
+
+        Cursor cursor = null;
+
+        try {
+            cursor = repository.getTripsHistory();
+
+            if (cursor == null) {
+                throw new Exception();
+            }
+
+            int amountColumn = cursor.getColumnIndexOrThrow("amount");
+            int timeColumn = cursor.getColumnIndexOrThrow("created_at");
+            int durationColumn = cursor.getColumnIndexOrThrow("duration");
+
+            HashMap<Long, Long> earnedResets = new HashMap<>();
+            HashMap<Long, Long> roundResets = new HashMap<>();
+            HashMap<Long, Long> durationResets = new HashMap<>();
+
+            while (cursor.moveToNext()) {
+                long time = cursor.getLong(timeColumn);
+                long amount = cursor.getLong(amountColumn);
+                long duration = Math.max(
+                    0L,
+                    cursor.getLong(durationColumn)
+                );
+
+                if (time <= 0) continue;
+
+                long day = dayStart(time);
+
+                totalAmount = safeAdd(totalAmount, amount);
+                totalCount = safeAdd(totalCount, 1L);
+
+                rawDaily.put(
+                    day,
+                    safeAdd(
+                        rawDaily.containsKey(day)
+                            ? rawDaily.get(day)
+                            : 0L,
+                        amount
+                    )
+                );
+
+                DailyMetrics daily = adjustedDaily.get(day);
+
+                if (daily == null) {
+                    daily = new DailyMetrics();
+                    adjustedDaily.put(day, daily);
+                }
+
+                if (!earnedResets.containsKey(day)) {
+                    earnedResets.put(
+                        day,
+                        repository.getDailyMetricReset(day, "earned")
+                    );
+
+                    roundResets.put(
+                        day,
+                        repository.getDailyMetricReset(day, "rounds")
+                    );
+
+                    durationResets.put(
+                        day,
+                        repository.getDailyMetricReset(day, "duration")
+                    );
+                }
+
+                if (time >= earnedResets.get(day)) {
+                    daily.earned = safeAdd(daily.earned, amount);
+                }
+
+                if (time >= roundResets.get(day)) {
+                    daily.rounds = safeAdd(daily.rounds, 1L);
+                }
+
+                if (time >= durationResets.get(day)) {
+                    daily.duration = safeAdd(daily.duration, duration);
+                }
+            }
+
+        } catch (Exception e) {
+            Toast.makeText(
+                this,
+                "Не удалось загрузить статистику",
+                Toast.LENGTH_SHORT
+            ).show();
+
+        } finally {
+            if (cursor != null) cursor.close();
+        }
+
+        long todayEarned = 0;
+        long todayRounds = 0;
+
+        DailyMetrics today = adjustedDaily.get(todayStart);
+
+        if (today != null) {
+            todayEarned = today.earned;
+            todayRounds = today.rounds;
+        }
+
+        long weekEarned = 0;
+        long weekRounds = 0;
+
+        for (Map.Entry<Long, DailyMetrics> entry : adjustedDaily.entrySet()) {
+            if (entry.getKey() >= weekStart &&
+                entry.getKey() <= todayStart) {
+
+                weekEarned = safeAdd(
+                    weekEarned,
+                    entry.getValue().earned
+                );
+
+                weekRounds = safeAdd(
+                    weekRounds,
+                    entry.getValue().rounds
+                );
+            }
+        }
+
+        for (Map.Entry<Long, Long> entry : rawDaily.entrySet()) {
+            if (entry.getValue() > bestDay) {
+                bestDay = entry.getValue();
+                bestDayTime = entry.getKey();
+            }
+        }
+
+        LinearLayout todayCard = card();
+
+        todayCard.addView(text(
+            "СЕГОДНЯ",
+            12, muted(), true
+        ));
+
+        todayCard.addView(text(
+            money(todayEarned) + " ₽",
+            29, accent(), true
+        ));
+
+        todayCard.addView(text(
+            "Кругов: " + todayRounds,
+            14, fg(), false
+        ));
+
+        LinearLayout weekCard = card();
+
+        weekCard.addView(text(
+            "ПОСЛЕДНИЕ 7 ДНЕЙ",
+            12, muted(), true
+        ));
+
+        weekCard.addView(text(
+            money(weekEarned) + " ₽",
+            29, accent(), true
+        ));
+
+        weekCard.addView(text(
+            "Кругов: " + weekRounds,
+            14, fg(), false
+        ));
+
+        LinearLayout all = card();
+
+        all.addView(text(
+            "ЗА ВСЁ ВРЕМЯ",
+            12, muted(), true
+        ));
+
+        all.addView(text(
+            money(totalAmount) + " ₽",
+            25, fg(), true
+        ));
+
+        all.addView(text(
+            "Всего кругов: " + totalCount,
+            14, fg(), false
+        ));
+
+        all.addView(text(
+            "Средний заработок за круг: " +
+            money(totalCount > 0 ? totalAmount / totalCount : 0) + " ₽",
+            14, muted(), false
+        ));
+
+        LinearLayout records = card();
+
+        records.addView(text(
+            "ЛИЧНЫЕ РЕКОРДЫ",
+            15, fg(), true
+        ));
+
+        records.addView(text(
+            "Самый прибыльный день: " + money(bestDay) + " ₽",
+            14, accent(), true
+        ));
+
+        if (bestDayTime > 0) {
+            records.addView(text(
+                new SimpleDateFormat(
+                    "dd.MM.yyyy",
+                    Locale.getDefault()
+                ).format(new Date(bestDayTime)),
+                12, muted(), false
+            ));
+        }
+
+        long bestShift = 0;
+        Cursor shifts = null;
+
+        try {
+            shifts = repository.getShiftsHistory();
+
+            if (shifts != null) {
+                int earnedColumn = shifts.getColumnIndex("earned");
+
+                if (earnedColumn >= 0) {
+                    while (shifts.moveToNext()) {
+                        bestShift = Math.max(
+                            bestShift,
+                            shifts.getLong(earnedColumn)
+                        );
+                    }
+                }
+            }
+
+        } catch (Exception ignored) {
+        } finally {
+            if (shifts != null) shifts.close();
+        }
+
+        records.addView(text(
+            "Лучший заработок за смену: " + money(bestShift) + " ₽",
+            14, accent(), true
+        ));
+
+        showDailyMetricsSelector();
+
+        Button finishShift = button(
+            running
+                ? "СНАЧАЛА ЗАВЕРШИ ТЕКУЩИЙ РЕЙС"
+                : "ЗАВЕРШИТЬ СМЕНУ",
+            accent()
+        );
+
+        LinearLayout.LayoutParams finishParams =
+            new LinearLayout.LayoutParams(-1, dp(48));
+
+        finishParams.topMargin = dp(12);
+        content.addView(finishShift, finishParams);
+
+        finishShift.setEnabled(
+            !running &&
+            (read("shiftEarned") > 0 || read("shiftTrips") > 0)
+        );
+
+        finishShift.setOnClickListener(v -> confirmFinishShift());
+    }
+
+    private void showHistory() {
+        heading(
+            "История кругов",
+            "Сохранённые записи рейсов"
+        );
+
+        Cursor cursor = null;
+
+        try {
+            cursor = repository.getTripsHistory();
+
+            if (cursor == null || cursor.getCount() == 0) {
+                card().addView(text(
+                    "Пока нет записей. Добавь первый круг!",
+                    14, muted(), false
+                ));
+                return;
+            }
+
+            int amountColumn = cursor.getColumnIndexOrThrow("amount");
+            int timeColumn = cursor.getColumnIndexOrThrow("created_at");
+            int durationColumn = cursor.getColumnIndexOrThrow("duration");
+            int routeColumn = cursor.getColumnIndexOrThrow("route");
+            int noteColumn = cursor.getColumnIndexOrThrow("note");
+
+            SimpleDateFormat fmt = new SimpleDateFormat(
+                "dd.MM.yyyy  HH:mm",
+                Locale.getDefault()
+            );
+
+            int number = cursor.getCount();
+
+            while (cursor.moveToNext()) {
+                long amount = cursor.getLong(amountColumn);
+                long time = cursor.getLong(timeColumn);
+                long duration = cursor.getLong(durationColumn);
+
+                String route = cursor.getString(routeColumn);
+                String note = cursor.getString(noteColumn);
+
+                LinearLayout c = card();
+
+                c.addView(text(
+                    "Запись №" + number,
+                    12, muted(), true
+                ));
+
+                c.addView(text(
+                    "+" + money(amount) + " ₽",
+                    21, accent(), true
+                ));
+
+                c.addView(text(
+                    time > 0
+                        ? fmt.format(new Date(time))
+                        : "Время неизвестно",
+                    12, fg(), false
+                ));
+
+                if (duration > 0) {
+                    c.addView(text(
+                        "Длительность: " + formatTime(duration),
+                        12, muted(), false
+                    ));
+                }
+
+                if (route != null && !route.isEmpty()) {
+                    c.addView(text(
+                        "Маршрут: " + route,
+                        12, fg(), false
+                    ));
+                }
+
+                if (note != null && !note.isEmpty()) {
+                    c.addView(text(
+                        "Заметка: " + note,
+                        12, muted(), false
+                    ));
+                }
+
+                number--;
+            }
+
+        } catch (Exception e) {
+            card().addView(text(
+                "Не удалось загрузить историю",
+                14, muted(), false
+            ));
+        } finally {
+            if (cursor != null) cursor.close();
+        }
+    }
+
+    private JSONArray getGoals() {
+        try {
+            return new JSONArray(
+                prefs.getString("custom_goals", "[]")
+            );
+        } catch (Exception e) {
+            return new JSONArray();
+        }
+    }
+
+    private void saveGoals(JSONArray goals) {
+        prefs.edit()
+            .putString("custom_goals", goals.toString())
+            .apply();
+    }
+
+    private void showCalculator() {
+        heading(
+            "Калькулятор целей",
+            "Создавай и отслеживай свои накопления"
+        );
+
+        Button add = button("+ ДОБАВИТЬ ЦЕЛЬ", accent());
+
+        LinearLayout.LayoutParams ap =
+            new LinearLayout.LayoutParams(-1, dp(48));
+
+        ap.topMargin = dp(12);
+        content.addView(add, ap);
+        add.setOnClickListener(v -> showGoalEditor(-1));
+
+        JSONArray goals = getGoals();
+
+        if (goals.length() == 0) {
+            card().addView(text(
+                "Пока нет пользовательских целей. Добавь первую!",
+                14, muted(), false
+            ));
+        }
+
+        for (int i = 0; i < goals.length(); i++) {
+            final int index = i;
+
+            try {
+                JSONObject goal = goals.getJSONObject(i);
+                String name = goal.optString("name", "Моя цель");
+                long amount = Math.max(1L, goal.optLong("amount", 1));
+                long roundsPerDay = Math.max(1L, goal.optLong("rounds", 1));
+
+                long remaining = Math.max(0L, amount - balance);
+                long roundsNeeded = remaining / pay();
+
+                if (remaining % pay() != 0) {
+                    roundsNeeded++;
+                }
+
+                long expected = safeMultiply(roundsPerDay, pay());
+
+                long days = roundsNeeded == 0
+                    ? 0
+                    : roundsNeeded / roundsPerDay +
+                      (roundsNeeded % roundsPerDay == 0 ? 0 : 1);
+
+                double percent = Math.min(
+                    100.0,
+                    (double)balance * 100.0 / Math.max(1L, amount)
+                );
+
+                LinearLayout c = card();
+
+                c.addView(text(
+                    name,
+                    19, fg(), true
+                ));
+
+                c.addView(text(
+                    "Цель: " + money(amount) + " ₽",
+                    13, muted(), false
+                ));
+
+                c.addView(text(
+                    "Осталось: " + money(remaining) + " ₽",
+                    16, accent(), true
+                ));
+
+                ProgressBar bar = new ProgressBar(
+                    this,
+                    null,
+                    android.R.attr.progressBarStyleHorizontal
+                );
+
+                bar.setMax(100);
+                bar.setProgress((int)percent);
+                bar.setProgressTintList(
+                    ColorStateList.valueOf(accent())
+                );
+
+                LinearLayout.LayoutParams bp =
+                    new LinearLayout.LayoutParams(-1, dp(8));
+
+                bp.topMargin = dp(10);
+                c.addView(bar, bp);
+
+                c.addView(text(
+                    "Выполнено: " +
+                    String.format(Locale.US, "%.1f", percent) + "%",
+                    13, fg(), false
+                ));
+
+                c.addView(text(
+                    "Осталось процентов: " +
+                    String.format(
+                        Locale.US,
+                        "%.1f",
+                        Math.max(0, 100.0 - percent)
+                    ) + "%",
+                    13, muted(), false
+                ));
+
+                c.addView(text(
+                    "Кругов осталось: " + roundsNeeded,
+                    14, fg(), true
+                ));
+
+                c.addView(text(
+                    "План: " + roundsPerDay + " кругов в день",
+                    13, muted(), false
+                ));
+
+                c.addView(text(
+                    "Ожидаемый заработок в день: " +
+                    money(expected) + " ₽",
+                    13, accent(), true
+                ));
+
+                c.addView(text(
+                    "Примерно дней до цели: " + days,
+                    13, fg(), false
+                ));
+
+                Button editButton = button(
+                    "ИЗМЕНИТЬ ЦЕЛЬ",
+                    cardColor()
+                );
+
+                c.addView(
+                    editButton,
+                    new LinearLayout.LayoutParams(-1, dp(44))
+                );
+
+                editButton.setOnClickListener(
+                    v -> showGoalEditor(index)
+                );
+
+                Button deleteButton = button(
+                    "УДАЛИТЬ ЦЕЛЬ",
+                    cardColor()
+                );
+
+                c.addView(
+                    deleteButton,
+                    new LinearLayout.LayoutParams(-1, dp(44))
+                );
+
+                deleteButton.setOnClickListener(
+                    v -> confirmDeleteGoal(index)
+                );
+
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    private void showGoalEditor(int index) {
+        JSONArray goals = getGoals();
+
+        String oldName = "";
+        String oldAmount = "";
+        String oldRounds = "5";
+
+        if (index >= 0 && index < goals.length()) {
+            JSONObject item = goals.optJSONObject(index);
+
+            if (item != null) {
+                oldName = item.optString("name", "");
+                oldAmount = String.valueOf(item.optLong("amount"));
+                oldRounds = String.valueOf(item.optLong("rounds", 5));
+            }
+        }
+
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(1);
+        box.setPadding(dp(18), dp(8), dp(18), 0);
+
+        EditText name = edit(
+            "Название цели",
+            InputType.TYPE_CLASS_TEXT
+        );
+        name.setText(oldName);
+        box.addView(name);
+
+        EditText amount = edit(
+            "Сумма цели в рублях",
+            InputType.TYPE_CLASS_NUMBER
+        );
+        amount.setText(oldAmount);
+        box.addView(amount);
+
+        EditText rounds = edit(
+            "Кругов в день",
+            InputType.TYPE_CLASS_NUMBER
+        );
+        rounds.setText(oldRounds);
+        box.addView(rounds);
+
+        new AlertDialog.Builder(this)
+            .setTitle(index < 0 ? "Новая цель" : "Изменить цель")
+            .setView(box)
+            .setNegativeButton("Отмена", null)
+            .setPositiveButton("Сохранить", (d, w) -> {
+                try {
+                    String n = name.getText().toString().trim();
+
+                    long a = Long.parseLong(
+                        amount.getText().toString().trim()
+                    );
+
+                    long r = Long.parseLong(
+                        rounds.getText().toString().trim()
+                    );
+
+                    if (n.isEmpty() || a <= 0 || r <= 0) {
+                        throw new Exception();
+                    }
+
+                    JSONObject item = new JSONObject();
+                    item.put("name", n);
+                    item.put("amount", a);
+                    item.put("rounds", r);
+
+                    if (index >= 0 && index < goals.length()) {
+                        goals.put(index, item);
+                    } else {
+                        goals.put(item);
+                    }
+
+                    saveGoals(goals);
+                    renderPage();
+
+                } catch (Exception e) {
+                    Toast.makeText(
+                        this,
+                        "Проверь название, сумму и количество кругов",
+                        Toast.LENGTH_LONG
+                    ).show();
+                }
+            })
+            .show();
+    }
+
+    private void confirmDeleteGoal(int index) {
+        new AlertDialog.Builder(this)
+            .setTitle("Удалить цель?")
+            .setMessage("Эта цель будет удалена.")
+            .setNegativeButton("Отмена", null)
+            .setPositiveButton("Удалить", (d, w) -> {
+                JSONArray old = getGoals();
+                JSONArray updated = new JSONArray();
+
+                for (int i = 0; i < old.length(); i++) {
+                    if (i != index) {
+                        updated.put(old.opt(i));
+                    }
+                }
+
+                saveGoals(updated);
+                renderPage();
+            })
+            .show();
+            }
