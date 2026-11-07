@@ -201,8 +201,8 @@ public class MainActivity extends Activity {
         LinearLayout labels = new LinearLayout(this);
         labels.setOrientation(1);
         labels.setPadding(dp(12), 0, 0, 0);
-        labels.addView(text("MATRESHKA", 11, muted(), true));
-        labels.addView(text("TRUCK HELPER", 20, fg(), true));
+        labels.addView(text("TruckLog", 11, muted(), true));
+        labels.addView(text("TruckLog", 20, fg(), true));
 
         header.addView(labels);
         root.addView(header);
