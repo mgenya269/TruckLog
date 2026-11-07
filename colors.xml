@@ -1,0 +1,6 @@
+<resources>
+    <color name="icon_background">#160D2B</color>
+    <color name="colorPrimary">#7B2CDA</color>
+    <color name="colorPrimaryDark">#10091D</color>
+    <color name="colorAccent">#B56CFF</color>
+</resources>
