@@ -935,3 +935,461 @@ public class FloatingPanelService extends Service {
             settingsBox.addView(cancelButton);
 
             root.addView(settingsBox);
+            settingsButton.setOnClickListener(v -> {
+                playFeedback(true);
+
+                boolean show =
+                    settingsBox.getVisibility() != View.VISIBLE;
+
+                settingsBox.setVisibility(
+                    show ? View.VISIBLE : View.GONE
+                );
+
+                editing = show;
+                setFocusable(show);
+
+                if (show) {
+                    settingsButton.setText("СКРЫТЬ НАСТРОЙКИ");
+                    payInput.requestFocus();
+
+                    payInput.post(() -> {
+                        InputMethodManager imm =
+                            (InputMethodManager) getSystemService(
+                                INPUT_METHOD_SERVICE
+                            );
+
+                        if (imm != null) {
+                            imm.showSoftInput(
+                                payInput,
+                                InputMethodManager.SHOW_IMPLICIT
+                            );
+                        }
+                    });
+
+                } else {
+                    settingsButton.setText(
+                        "НАСТРОЙКИ ВЫПЛАТЫ И ЦЕЛИ"
+                    );
+                    hideKeyboard();
+                }
+            });
+
+            saveButton.setOnClickListener(v -> {
+                try {
+                    long payValue = Long.parseLong(
+                        payInput.getText().toString().trim()
+                    );
+
+                    long goalValue = Long.parseLong(
+                        goalInput.getText().toString().trim()
+                    );
+
+                    if (payValue <= 0 ||
+                        payValue > Integer.MAX_VALUE ||
+                        goalValue <= 0) {
+                        throw new NumberFormatException();
+                    }
+
+                    boolean saved = prefs.edit()
+                        .putInt("pay", (int) payValue)
+                        .putLong("goal", goalValue)
+                        .commit();
+
+                    if (!saved) {
+                        playFeedback(false);
+
+                        Toast.makeText(
+                            this,
+                            "Не удалось сохранить настройки",
+                            Toast.LENGTH_SHORT
+                        ).show();
+
+                        return;
+                    }
+
+                    playFeedback(true);
+                    hideKeyboard();
+
+                    settingsBox.setVisibility(View.GONE);
+                    settingsButton.setText(
+                        "НАСТРОЙКИ ВЫПЛАТЫ И ЦЕЛИ"
+                    );
+
+                    editing = false;
+
+                    setFocusable(false);
+                    refreshStats();
+
+                } catch (Exception e) {
+                    playFeedback(false);
+
+                    Toast.makeText(
+                        this,
+                        "Введи корректные числа",
+                        Toast.LENGTH_SHORT
+                    ).show();
+                }
+            });
+
+            cancelButton.setOnClickListener(v -> {
+                playFeedback(true);
+                hideKeyboard();
+
+                settingsBox.setVisibility(View.GONE);
+                settingsButton.setText(
+                    "НАСТРОЙКИ ВЫПЛАТЫ И ЦЕЛИ"
+                );
+
+                editing = false;
+
+                setFocusable(false);
+            });
+
+            resetButton = btn(
+                "СБРОСИТЬ СТАТИСТИКУ",
+                0xFFB84040
+            );
+
+            LinearLayout.LayoutParams resetParams =
+                new LinearLayout.LayoutParams(-1, scaledDp(42));
+
+            resetParams.topMargin = scaledDp(8);
+            root.addView(resetButton, resetParams);
+
+            resetButton.setOnClickListener(v -> showResetDialog());
+
+            panel = root;
+
+            panelLp = lp(scaledDp(300), -2);
+            panelLp.gravity = Gravity.TOP | Gravity.RIGHT;
+
+            panelLp.x = prefs.getInt(KEY_PANEL_X, 0);
+            panelLp.y = prefs.getInt(
+                KEY_PANEL_Y,
+                Math.max(dp(20), tabLp.y - dp(60))
+            );
+
+            limitPanelPosition();
+
+            wm.addView(panel, panelLp);
+
+            applyPanelOpacity(panel);
+            refreshStats();
+
+            panel.post(() -> {
+                if (panel == null || panelLp == null) {
+                    return;
+                }
+
+                limitPanelPosition();
+
+                try {
+                    wm.updateViewLayout(panel, panelLp);
+                } catch (Exception ignored) {
+                }
+            });
+
+        } catch (Exception e) {
+            removePanel();
+            expanded = false;
+
+            Toast.makeText(
+                this,
+                "Не удалось открыть плавающую панель",
+                Toast.LENGTH_SHORT
+            ).show();
+        }
+    }
+
+    // ---------------- СБРОС ТЕКУЩЕЙ СМЕНЫ ----------------
+
+    private void showResetDialog() {
+        try {
+            AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("Сбросить статистику смены?")
+                .setMessage(
+                    "Будут сброшены только показатели текущей смены: " +
+                    "заработок, количество кругов и время. " +
+                    "Общий баланс, общее количество кругов, история рейсов " +
+                    "и завершённые смены останутся без изменений."
+                )
+                .setNegativeButton("Отмена", null)
+                .setPositiveButton(
+                    "Сбросить",
+                    (d, which) -> resetStats()
+                )
+                .create();
+
+            Window window = dialog.getWindow();
+
+            if (window != null) {
+                window.setType(Build.VERSION.SDK_INT >= 26
+                    ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+                    : WindowManager.LayoutParams.TYPE_PHONE);
+            }
+
+            dialog.show();
+
+        } catch (Exception e) {
+            Toast.makeText(
+                this,
+                "Не удалось открыть окно сброса",
+                Toast.LENGTH_SHORT
+            ).show();
+        }
+    }
+
+    private void resetStats() {
+        try {
+            if (!recoverPendingPanelOperations()) {
+                playFeedback(false);
+
+                Toast.makeText(
+                    this,
+                    "Не удалось восстановить данные. Сброс отменён.",
+                    Toast.LENGTH_LONG
+                ).show();
+
+                return;
+            }
+
+            SharedPreferences.Editor editor = prefs.edit();
+
+            editor.putLong("shiftEarned", 0L);
+            editor.putLong("shiftTrips", 0L);
+            editor.putLong("seconds", 0L);
+            editor.putBoolean("running", false);
+            editor.putLong("startAt", 0L);
+            editor.putLong(KEY_SHIFT_STARTED, 0L);
+
+            // Общий баланс, общие круги и история не изменяются.
+            editor.putString(KEY_UNDO_STACK, "");
+            editor.remove(KEY_LAST_PANEL_TRIP);
+            editor.remove(KEY_LAST_PANEL_AMOUNT);
+
+            if (!editor.commit()) {
+                playFeedback(false);
+
+                Toast.makeText(
+                    this,
+                    "Не удалось сохранить сброс. История не изменена.",
+                    Toast.LENGTH_LONG
+                ).show();
+
+                refreshStats();
+                return;
+            }
+
+            playFeedback(true);
+            refreshStats();
+
+            Toast.makeText(
+                this,
+                "Показатели текущей смены сброшены. История сохранена.",
+                Toast.LENGTH_SHORT
+            ).show();
+
+        } catch (Exception e) {
+            playFeedback(false);
+
+            Toast.makeText(
+                this,
+                "Ошибка сброса. История сохранена.",
+                Toast.LENGTH_LONG
+            ).show();
+        }
+    }
+
+    // ---------------- ДОБАВЛЕНИЕ КРУГА ----------------
+
+    private void addRound() {
+        if (!recoverPendingPanelOperations()) {
+            playFeedback(false);
+
+            Toast.makeText(
+                this,
+                "Не удалось восстановить данные. Круг не добавлен.",
+                Toast.LENGTH_LONG
+            ).show();
+
+            return;
+        }
+
+        long pay = prefs.getInt("pay", 15000);
+        long balance = prefs.getLong("balance", 0L);
+        long trips = prefs.getLong("trips", 0L);
+        long earned = prefs.getLong("shiftEarned", 0L);
+        long shiftTrips = prefs.getLong("shiftTrips", 0L);
+
+        if (pay <= 0 ||
+            !canAdd(balance, pay) ||
+            !canAdd(earned, pay) ||
+            trips < 0 ||
+            trips == Long.MAX_VALUE ||
+            shiftTrips < 0 ||
+            shiftTrips == Long.MAX_VALUE) {
+
+            playFeedback(false);
+
+            Toast.makeText(
+                this,
+                "Невозможно добавить круг",
+                Toast.LENGTH_SHORT
+            ).show();
+
+            return;
+        }
+
+        long now = System.currentTimeMillis();
+
+        long shiftStartedAt = prefs.getLong(
+            KEY_SHIFT_STARTED,
+            0L
+        );
+
+        if (shiftStartedAt <= 0L) {
+            shiftStartedAt = now;
+        }
+
+        ArrayList<UndoRecord> stack = getUndoStack();
+
+        DatabaseHelper.PanelOperation operation =
+            repository.addPanelTripWithJournal(
+                pay,
+                now,
+                balance + pay,
+                trips + 1L,
+                earned + pay,
+                shiftTrips + 1L,
+                shiftStartedAt,
+                serializeUndoStack(stack)
+            );
+
+        if (operation == null) {
+            playFeedback(false);
+
+            Toast.makeText(
+                this,
+                "Не удалось сохранить круг. Статистика не изменена.",
+                Toast.LENGTH_LONG
+            ).show();
+
+            return;
+        }
+
+        if (!applyPanelOperation(operation)) {
+            playFeedback(false);
+
+            Toast.makeText(
+                this,
+                "Круг сохранён в журнале, но счётчики ещё не обновлены. " +
+                "Не нажимай добавление повторно; перезапусти приложение.",
+                Toast.LENGTH_LONG
+            ).show();
+
+            refreshStats();
+            return;
+        }
+
+        playFeedback(true);
+        refreshStats();
+    }
+
+    // ---------------- ОТМЕНА КРУГА ----------------
+
+    private void undoRound() {
+        if (!recoverPendingPanelOperations()) {
+            playFeedback(false);
+
+            Toast.makeText(
+                this,
+                "Не удалось восстановить данные. Отмена не выполнена.",
+                Toast.LENGTH_LONG
+            ).show();
+
+            return;
+        }
+
+        ArrayList<UndoRecord> stack = getUndoStack();
+
+        if (stack.isEmpty()) {
+            refreshStats();
+            return;
+        }
+
+        UndoRecord record = stack.get(stack.size() - 1);
+
+        long balance = prefs.getLong("balance", 0L);
+        long trips = prefs.getLong("trips", 0L);
+        long earned = prefs.getLong("shiftEarned", 0L);
+        long shiftTrips = prefs.getLong("shiftTrips", 0L);
+
+        if (record.id <= 0 ||
+            record.amount <= 0 ||
+            balance < record.amount ||
+            trips <= 0 ||
+            earned < record.amount ||
+            shiftTrips <= 0) {
+
+            playFeedback(false);
+
+            Toast.makeText(
+                this,
+                "Не удалось безопасно отменить круг. Статистика не изменена.",
+                Toast.LENGTH_LONG
+            ).show();
+
+            return;
+        }
+
+        stack.remove(stack.size() - 1);
+
+        long newEarned = earned - record.amount;
+        long newShiftTrips = shiftTrips - 1L;
+
+        long newShiftStartedAt =
+            (newEarned == 0L && newShiftTrips == 0L)
+                ? 0L
+                : prefs.getLong(KEY_SHIFT_STARTED, 0L);
+
+        DatabaseHelper.PanelOperation operation =
+            repository.undoPanelTripWithJournal(
+                record.id,
+                record.amount,
+                balance - record.amount,
+                trips - 1L,
+                newEarned,
+                newShiftTrips,
+                newShiftStartedAt,
+                serializeUndoStack(stack)
+            );
+
+        if (operation == null) {
+            playFeedback(false);
+
+            Toast.makeText(
+                this,
+                "Не удалось отменить круг. Статистика не изменена.",
+                Toast.LENGTH_LONG
+            ).show();
+
+            return;
+        }
+
+        if (!applyPanelOperation(operation)) {
+            playFeedback(false);
+
+            Toast.makeText(
+                this,
+                "Отмена сохранена в журнале, но ещё не применена. " +
+                "Не повторяй действие; перезапусти приложение.",
+                Toast.LENGTH_LONG
+            ).show();
+
+            refreshStats();
+            return;
+        }
+
+        playFeedback(true);
+        refreshStats();
+                    }
