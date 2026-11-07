@@ -484,3 +484,454 @@ public class FloatingPanelService extends Service {
             PixelFormat.TRANSLUCENT
         );
     }
+    // ---------------- ПОЛОЖЕНИЕ И ПЕРЕМЕЩЕНИЕ ----------------
+
+    private int screenWidth() {
+        return getResources().getDisplayMetrics().widthPixels;
+    }
+
+    private int screenHeight() {
+        return getResources().getDisplayMetrics().heightPixels;
+    }
+
+    private int clamp(int value, int min, int max) {
+        return Math.max(min, Math.min(max, value));
+    }
+
+    private void saveTabPosition() {
+        if (tabLp == null || prefs == null) {
+            return;
+        }
+
+        prefs.edit()
+            .putInt(KEY_TAB_X, tabLp.x)
+            .putInt(KEY_TAB_Y, tabLp.y)
+            .apply();
+    }
+
+    private void savePanelPosition() {
+        if (panelLp == null || prefs == null) {
+            return;
+        }
+
+        prefs.edit()
+            .putInt(KEY_PANEL_X, panelLp.x)
+            .putInt(KEY_PANEL_Y, panelLp.y)
+            .apply();
+    }
+
+    private void limitTabPosition() {
+        if (tabLp == null) {
+            return;
+        }
+
+        int maxX = Math.max(0, screenWidth() - tabLp.width);
+        int maxY = Math.max(0, screenHeight() - tabLp.height);
+
+        tabLp.x = clamp(tabLp.x, 0, maxX);
+        tabLp.y = clamp(tabLp.y, 0, maxY);
+    }
+
+    private void limitPanelPosition() {
+        if (panelLp == null) {
+            return;
+        }
+
+        int width = panelLp.width;
+
+        if (width <= 0) {
+            width = scaledDp(300);
+        }
+
+        int height = 0;
+
+        if (panel != null) {
+            height = panel.getHeight();
+        }
+
+        if (height <= 0) {
+            height = dp(350);
+        }
+
+        int maxX = Math.max(0, screenWidth() - width);
+        int maxY = Math.max(0, screenHeight() - height);
+
+        panelLp.x = clamp(panelLp.x, 0, maxX);
+        panelLp.y = clamp(panelLp.y, 0, maxY);
+    }
+
+    private void makeTab() {
+        TextView view = txt("🚛", 22, Color.WHITE, true);
+
+        view.setGravity(Gravity.CENTER);
+        view.setBackground(shape(accent(), 18));
+
+        tab = view;
+
+        tabLp = lp(dp(52), dp(58));
+        tabLp.gravity = Gravity.TOP | Gravity.RIGHT;
+
+        tabLp.x = prefs.getInt(KEY_TAB_X, 0);
+        tabLp.y = prefs.getInt(KEY_TAB_Y, dp(180));
+
+        limitTabPosition();
+
+        wm.addView(tab, tabLp);
+
+        tab.setOnTouchListener((v, event) -> {
+            switch (event.getAction()) {
+                case MotionEvent.ACTION_DOWN:
+                    tabDownX = event.getRawX();
+                    tabDownY = event.getRawY();
+
+                    tabStartX = tabLp.x;
+                    tabStartY = tabLp.y;
+
+                    tabMoved = false;
+                    return true;
+
+                case MotionEvent.ACTION_MOVE:
+                    float dx = event.getRawX() - tabDownX;
+                    float dy = event.getRawY() - tabDownY;
+
+                    if (Math.abs(dx) > dp(7) ||
+                        Math.abs(dy) > dp(7)) {
+                        tabMoved = true;
+                    }
+
+                    if (tabMoved) {
+                        tabLp.x = tabStartX - (int) dx;
+                        tabLp.y = tabStartY + (int) dy;
+
+                        limitTabPosition();
+
+                        try {
+                            wm.updateViewLayout(tab, tabLp);
+                        } catch (Exception ignored) {
+                        }
+                    }
+
+                    return true;
+
+                case MotionEvent.ACTION_UP:
+                    if (tabMoved) {
+                        saveTabPosition();
+                    } else {
+                        toggle();
+                    }
+                    return true;
+
+                case MotionEvent.ACTION_CANCEL:
+                    return true;
+            }
+
+            return true;
+        });
+    }
+
+    private void setPanelDrag(View view) {
+        if (view == null) {
+            return;
+        }
+
+        view.setOnTouchListener((v, event) -> {
+            if (panelLp == null || panel == null) {
+                return false;
+            }
+
+            switch (event.getAction()) {
+                case MotionEvent.ACTION_DOWN:
+                    panelDownX = event.getRawX();
+                    panelDownY = event.getRawY();
+
+                    panelStartX = panelLp.x;
+                    panelStartY = panelLp.y;
+
+                    panelMoved = false;
+                    return true;
+
+                case MotionEvent.ACTION_MOVE:
+                    float dx = event.getRawX() - panelDownX;
+                    float dy = event.getRawY() - panelDownY;
+
+                    if (Math.abs(dx) > dp(5) ||
+                        Math.abs(dy) > dp(5)) {
+                        panelMoved = true;
+                    }
+
+                    if (panelMoved) {
+                        panelLp.x = panelStartX - (int) dx;
+                        panelLp.y = panelStartY + (int) dy;
+
+                        limitPanelPosition();
+
+                        try {
+                            wm.updateViewLayout(panel, panelLp);
+                        } catch (Exception ignored) {
+                        }
+                    }
+
+                    return true;
+
+                case MotionEvent.ACTION_UP:
+                    if (panelMoved) {
+                        savePanelPosition();
+                    }
+                    return true;
+
+                case MotionEvent.ACTION_CANCEL:
+                    return true;
+            }
+
+            return true;
+        });
+    }
+
+    private void refreshPanelSizeAndPosition() {
+        if (panel == null || panelLp == null) {
+            return;
+        }
+
+        panelLp.width = scaledDp(300);
+
+        limitPanelPosition();
+
+        try {
+            wm.updateViewLayout(panel, panelLp);
+        } catch (Exception ignored) {
+        }
+
+        applyPanelOpacity(panel);
+    }
+
+    // ---------------- ОТКРЫТИЕ И ЗАКРЫТИЕ ----------------
+
+    private void toggle() {
+        playFeedback(true);
+
+        if (expanded) {
+            removePanel();
+            expanded = false;
+            editing = false;
+        } else {
+            makePanel();
+            expanded = panel != null;
+        }
+    }
+
+    private void removePanel() {
+        if (panel != null) {
+            savePanelPosition();
+
+            try {
+                wm.removeView(panel);
+            } catch (Exception ignored) {
+            }
+
+            panel = null;
+        }
+
+        earnings = null;
+        count = null;
+        progressText = null;
+        panelTitle = null;
+
+        round = null;
+        undoButton = null;
+        settingsButton = null;
+        saveButton = null;
+        cancelButton = null;
+        resetButton = null;
+        closeButton = null;
+        dragButton = null;
+
+        payInput = null;
+        goalInput = null;
+        settingsBox = null;
+        progressBar = null;
+    }
+
+    // ---------------- СОЗДАНИЕ ПАНЕЛИ ----------------
+
+    private void makePanel() {
+        try {
+            LinearLayout root = new LinearLayout(this);
+
+            root.setOrientation(1);
+            root.setPadding(
+                scaledDp(13),
+                scaledDp(13),
+                scaledDp(13),
+                scaledDp(13)
+            );
+            root.setBackground(shape(background(), 20));
+
+            LinearLayout head = new LinearLayout(this);
+            head.setGravity(Gravity.CENTER_VERTICAL);
+
+            panelTitle = txt(
+                "TruckLog",
+                15,
+                fg(),
+                true
+            );
+
+            head.addView(
+                panelTitle,
+                new LinearLayout.LayoutParams(0, -2, 1)
+            );
+
+            dragButton = btn("☰", cardColor());
+
+            LinearLayout.LayoutParams dragParams =
+                new LinearLayout.LayoutParams(
+                    scaledDp(42),
+                    scaledDp(40)
+                );
+
+            // Кнопка перемещения немного ниже.
+            dragParams.topMargin = dp(4);
+            head.addView(dragButton, dragParams);
+
+            setPanelDrag(dragButton);
+
+            closeButton = btn("×", cardColor());
+
+            LinearLayout.LayoutParams closeParams =
+                new LinearLayout.LayoutParams(
+                    scaledDp(42),
+                    scaledDp(40)
+                );
+
+            closeParams.leftMargin = dp(6);
+
+            // Кнопка закрытия немного выше.
+            closeParams.bottomMargin = dp(4);
+
+            head.addView(closeButton, closeParams);
+
+            closeButton.setOnClickListener(v -> toggle());
+
+            root.addView(head);
+
+            earnings = txt("", 18, accent(), true);
+
+            LinearLayout.LayoutParams earningsParams =
+                new LinearLayout.LayoutParams(-1, -2);
+
+            earningsParams.topMargin = scaledDp(12);
+            root.addView(earnings, earningsParams);
+
+            count = txt("", 13, fg(), false);
+
+            LinearLayout.LayoutParams countParams =
+                new LinearLayout.LayoutParams(-1, -2);
+
+            countParams.topMargin = scaledDp(6);
+            root.addView(count, countParams);
+
+            progressText = txt("", 12, accent(), true);
+
+            LinearLayout.LayoutParams progressParams =
+                new LinearLayout.LayoutParams(-1, -2);
+
+            progressParams.topMargin = scaledDp(12);
+            root.addView(progressText, progressParams);
+
+            progressBar = new ProgressBar(
+                this,
+                null,
+                android.R.attr.progressBarStyleHorizontal
+            );
+
+            progressBar.setMax(100);
+            progressBar.setProgressTintList(
+                ColorStateList.valueOf(accent())
+            );
+
+            LinearLayout.LayoutParams barParams =
+                new LinearLayout.LayoutParams(-1, scaledDp(8));
+
+            barParams.topMargin = scaledDp(6);
+            root.addView(progressBar, barParams);
+
+            round = btn("", accent());
+
+            LinearLayout.LayoutParams roundParams =
+                new LinearLayout.LayoutParams(-1, scaledDp(50));
+
+            roundParams.topMargin = scaledDp(14);
+            root.addView(round, roundParams);
+
+            round.setOnClickListener(v -> addRound());
+
+            undoButton = btn(
+                "ОТМЕНИТЬ ПОСЛЕДНИЙ КРУГ",
+                cardColor()
+            );
+
+            LinearLayout.LayoutParams undoParams =
+                new LinearLayout.LayoutParams(-1, scaledDp(42));
+
+            undoParams.topMargin = scaledDp(7);
+            root.addView(undoButton, undoParams);
+
+            undoButton.setOnClickListener(v -> undoRound());
+
+            settingsButton = btn(
+                "НАСТРОЙКИ ВЫПЛАТЫ И ЦЕЛИ",
+                cardColor()
+            );
+
+            LinearLayout.LayoutParams settingsParams =
+                new LinearLayout.LayoutParams(-1, scaledDp(44));
+
+            settingsParams.topMargin = scaledDp(10);
+            root.addView(settingsButton, settingsParams);
+
+            settingsBox = new LinearLayout(this);
+            settingsBox.setOrientation(1);
+            settingsBox.setVisibility(View.GONE);
+            settingsBox.setPadding(0, scaledDp(8), 0, 0);
+
+            settingsBox.addView(
+                txt("Выплата за круг", 12, fg(), true)
+            );
+
+            payInput = new EditText(this);
+            payInput.setSingleLine(true);
+            payInput.setInputType(2);
+            payInput.setTextColor(fg());
+            payInput.setHintTextColor(fg());
+            payInput.setPadding(dp(10), dp(8), dp(10), dp(8));
+            payInput.setBackground(shape(cardColor(), 10));
+            payInput.setText(
+                String.valueOf(prefs.getInt("pay", 15000))
+            );
+
+            settingsBox.addView(payInput);
+
+            settingsBox.addView(
+                txt("Цель накоплений", 12, fg(), true)
+            );
+
+            goalInput = new EditText(this);
+            goalInput.setSingleLine(true);
+            goalInput.setInputType(2);
+            goalInput.setTextColor(fg());
+            goalInput.setHintTextColor(fg());
+            goalInput.setPadding(dp(10), dp(8), dp(10), dp(8));
+            goalInput.setBackground(shape(cardColor(), 10));
+            goalInput.setText(
+                String.valueOf(prefs.getLong("goal", 5000000))
+            );
+
+            settingsBox.addView(goalInput);
+
+            saveButton = btn("СОХРАНИТЬ", accent());
+            settingsBox.addView(saveButton);
+
+            cancelButton = btn("ОТМЕНА", cardColor());
+            settingsBox.addView(cancelButton);
+
+            root.addView(settingsBox);
