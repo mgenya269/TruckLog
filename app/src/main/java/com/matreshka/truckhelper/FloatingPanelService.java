@@ -1393,3 +1393,264 @@ public class FloatingPanelService extends Service {
         playFeedback(true);
         refreshStats();
                     }
+    // ---------------- ОБНОВЛЕНИЕ СТАТИСТИКИ ----------------
+
+    private void refreshStats() {
+        if (prefs == null) {
+            return;
+        }
+
+        long earned = prefs.getLong("shiftEarned", 0);
+        long shiftTrips = prefs.getLong("shiftTrips", 0);
+        long balance = prefs.getLong("balance", 0);
+        long goal = prefs.getLong("goal", 5000000);
+        int pay = prefs.getInt("pay", 15000);
+
+        if (earnings != null) {
+            earnings.setText(
+                "Заработок за смену: " +
+                money(earned) + " ₽"
+            );
+        }
+
+        if (count != null) {
+            count.setText(
+                "Кругов за смену: " + shiftTrips +
+                "\nОбщий баланс: " + money(balance) + " ₽"
+            );
+        }
+
+        if (round != null) {
+            round.setText(
+                "СДЕЛАЛ КРУГ  +" + money(pay) + " ₽"
+            );
+        }
+
+        if (progressText != null && progressBar != null) {
+            double percent = goal > 0
+                ? balance * 100.0 / goal
+                : 0;
+
+            progressBar.setProgress(
+                (int) Math.min(100, Math.max(0, percent))
+            );
+
+            progressText.setText(
+                "Прогресс: " +
+                String.format(Locale.US, "%.1f", percent) +
+                "%\nОсталось: " +
+                money(Math.max(0, goal - balance)) + " ₽"
+            );
+        }
+
+        if (undoButton != null) {
+            boolean has = !getUndoStack().isEmpty();
+
+            undoButton.setEnabled(has);
+            undoButton.setAlpha(has ? 1f : 0.5f);
+        }
+    }
+
+    // ---------------- СМЕНА ТЕМЫ ----------------
+
+    private void refreshTheme() {
+        int currentAccent = accent();
+        int currentBackground = background();
+        int currentCard = cardColor();
+        int currentForeground = fg();
+
+        if (tab != null) {
+            tab.setBackground(shape(currentAccent, 18));
+        }
+
+        if (panel != null) {
+            panel.setBackground(shape(currentBackground, 20));
+            applyPanelOpacity(panel);
+        }
+
+        if (panelTitle != null) {
+            panelTitle.setTextColor(currentForeground);
+        }
+
+        if (earnings != null) {
+            earnings.setTextColor(currentAccent);
+        }
+
+        if (count != null) {
+            count.setTextColor(currentForeground);
+        }
+
+        if (progressText != null) {
+            progressText.setTextColor(currentAccent);
+        }
+
+        if (progressBar != null) {
+            progressBar.setProgressTintList(
+                ColorStateList.valueOf(currentAccent)
+            );
+        }
+
+        if (round != null) {
+            round.setBackground(shape(currentAccent, 12));
+            round.setTextColor(currentForeground);
+        }
+
+        if (undoButton != null) {
+            undoButton.setBackground(shape(currentCard, 12));
+            undoButton.setTextColor(currentForeground);
+        }
+
+        if (settingsButton != null) {
+            settingsButton.setBackground(shape(currentCard, 12));
+            settingsButton.setTextColor(currentForeground);
+        }
+
+        if (saveButton != null) {
+            saveButton.setBackground(shape(currentAccent, 12));
+            saveButton.setTextColor(currentForeground);
+        }
+
+        if (cancelButton != null) {
+            cancelButton.setBackground(shape(currentCard, 12));
+            cancelButton.setTextColor(currentForeground);
+        }
+
+        if (resetButton != null) {
+            resetButton.setBackground(shape(0xFFB84040, 12));
+            resetButton.setTextColor(Color.WHITE);
+        }
+
+        if (closeButton != null) {
+            closeButton.setBackground(shape(currentCard, 12));
+            closeButton.setTextColor(currentForeground);
+        }
+
+        if (dragButton != null) {
+            dragButton.setBackground(shape(currentCard, 12));
+            dragButton.setTextColor(currentForeground);
+        }
+
+        if (payInput != null) {
+            payInput.setTextColor(currentForeground);
+            payInput.setHintTextColor(currentForeground);
+            payInput.setBackground(shape(currentCard, 10));
+        }
+
+        if (goalInput != null) {
+            goalInput.setTextColor(currentForeground);
+            goalInput.setHintTextColor(currentForeground);
+            goalInput.setBackground(shape(currentCard, 10));
+        }
+
+        if (settingsBox != null) {
+            for (int i = 0; i < settingsBox.getChildCount(); i++) {
+                View child = settingsBox.getChildAt(i);
+
+                if (child instanceof TextView &&
+                    !(child instanceof EditText)) {
+
+                    ((TextView) child).setTextColor(
+                        currentForeground
+                    );
+                }
+            }
+        }
+    }
+
+    // ---------------- ФОКУС И КЛАВИАТУРА ----------------
+
+    private void setFocusable(boolean focusable) {
+        if (panel == null || panelLp == null) {
+            return;
+        }
+
+        panelLp.flags =
+            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN;
+
+        if (!focusable) {
+            panelLp.flags |=
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
+        }
+
+        try {
+            wm.updateViewLayout(panel, panelLp);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void hideKeyboard() {
+        try {
+            InputMethodManager imm =
+                (InputMethodManager) getSystemService(
+                    INPUT_METHOD_SERVICE
+                );
+
+            if (imm != null && payInput != null) {
+                imm.hideSoftInputFromWindow(
+                    payInput.getWindowToken(),
+                    0
+                );
+            }
+
+        } catch (Exception ignored) {
+        }
+    }
+
+    // ---------------- ЖИЗНЕННЫЙ ЦИКЛ ----------------
+
+    @Override
+    public int onStartCommand(
+        Intent intent,
+        int flags,
+        int startId
+    ) {
+        return START_STICKY;
+    }
+
+    @Override
+    public void onDestroy() {
+        hideKeyboard();
+
+        if (panel != null) {
+            savePanelPosition();
+        }
+
+        if (tabLp != null) {
+            saveTabPosition();
+        }
+
+        if (prefs != null) {
+            if (listener != null) {
+                prefs.unregisterOnSharedPreferenceChangeListener(listener);
+            }
+
+            prefs.edit()
+                .putBoolean("panel_enabled", false)
+                .apply();
+        }
+
+        try {
+            if (tab != null) {
+                wm.removeView(tab);
+            }
+        } catch (Exception ignored) {
+        }
+
+        try {
+            if (panel != null) {
+                wm.removeView(panel);
+            }
+        } catch (Exception ignored) {
+        }
+
+        tab = null;
+        panel = null;
+
+        super.onDestroy();
+    }
+
+    @Override
+    public IBinder onBind(Intent intent) {
+        return null;
+    }
+}
