@@ -1,4 +1,3 @@
-
 package com.matreshka.truckhelper;
 
 import android.content.Context;
@@ -81,7 +80,7 @@ public final class AppPrefs {
         return prefs.getLong("shiftStartedAt", 0L);
     }
 
-    // ---------------- БЕЗОПАСНЫЙ СБРОС ТЕКУЩЕЙ СМЕНЫ ----------------
+    // ---------------- СБРОС ТЕКУЩЕЙ СМЕНЫ ----------------
 
     /**
      * Сбрасывает только показатели текущей смены.
@@ -110,24 +109,46 @@ public final class AppPrefs {
     // ---------------- СБРОС НАСТРОЕК ----------------
 
     /**
-     * Возвращает основные настройки к значениям по умолчанию.
+     * Возвращает настройки приложения к значениям по умолчанию.
      *
      * Не очищает:
      * - общий баланс;
      * - общее количество кругов;
-     * - заработок и историю;
-     * - сохранённые цели;
-     * - историю смен;
-     * - историю рейсов.
-     *
-     * Дополнительные настройки будут сбрасываться
-     * через отдельную логику MainActivity.
+     * - статистику и историю рейсов;
+     * - историю завершённых смен;
+     * - сохранённые пользовательские цели;
+     * - журнал операций базы данных.
      */
     public synchronized boolean resetSettingsToDefaults() {
         return prefs.edit()
                 .putInt("pay", 15000)
                 .putLong("goal", 5000000L)
                 .putInt("theme", 0)
+
+                .putBoolean("panel_enabled", false)
+
+                .putBoolean("sound_enabled", true)
+                .putBoolean("vibration_enabled", true)
+                .putInt("sound_volume", 70)
+
+                .putInt("panel_size", 100)
+                .putInt("panel_opacity", 100)
+
+                .putBoolean("notifications_enabled", true)
+
+                .putBoolean("home_block_balance", true)
+                .putBoolean("home_block_rounds", true)
+                .putBoolean("home_block_payout", true)
+                .putBoolean("home_block_timer", true)
+                .putBoolean("home_block_overlay", true)
+
+                .remove("home_block_order")
+
+                .remove("panel_tab_x")
+                .remove("panel_tab_y")
+                .remove("panel_window_x")
+                .remove("panel_window_y")
+
                 .commit();
     }
 
@@ -136,14 +157,16 @@ public final class AppPrefs {
     /**
      * Полностью очищает SharedPreferences.
      *
-     * Использовать исключительно при полном сбросе приложения
+     * Использовать только при полном сбросе приложения
      * после отдельного предупреждения и подтверждения пользователя.
      *
-     * Не вызывать при обычном сбросе настроек или статистики.
+     * Маркер миграции сохраняется, чтобы старые записи,
+     * перенесённые из прежней версии приложения, не появились повторно.
      */
     public synchronized boolean clearAllPreferences() {
         return prefs.edit()
                 .clear()
+                .putBoolean("database_migration_v1", true)
                 .commit();
     }
 
