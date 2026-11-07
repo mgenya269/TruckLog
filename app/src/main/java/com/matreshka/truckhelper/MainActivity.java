@@ -1743,3 +1743,797 @@ public class MainActivity extends Activity {
             })
             .show();
             }
+    private void showCharts() {
+        heading(
+            "Графики заработка",
+            "Сумма, дата и день недели за последние 7 дней"
+        );
+
+        LinearLayout c = card();
+
+        c.addView(
+            new EarningsChart(this),
+            new LinearLayout.LayoutParams(-1, dp(270))
+        );
+
+        LinearLayout info = card();
+
+        info.addView(text(
+            "График показывает полную историю заработка и не меняется при сбросе отдельных дневных показателей.",
+            13, muted(), false
+        ));
+
+        showDailyMetricsSelector();
+    }
+
+    private class EarningsChart extends View {
+
+        Paint paint = new Paint(3);
+
+        EarningsChart(Context c) {
+            super(c);
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+
+            int w = getWidth();
+            int h = getHeight();
+
+            long[] values = new long[7];
+
+            Calendar today = Calendar.getInstance();
+
+            today.set(Calendar.HOUR_OF_DAY, 0);
+            today.set(Calendar.MINUTE, 0);
+            today.set(Calendar.SECOND, 0);
+            today.set(Calendar.MILLISECOND, 0);
+
+            Calendar[] days = new Calendar[7];
+
+            for (int i = 0; i < 7; i++) {
+                days[i] = (Calendar)today.clone();
+                days[i].add(Calendar.DAY_OF_YEAR, i - 6);
+            }
+
+            Cursor cursor = null;
+
+            try {
+                cursor = repository.getTripsHistory();
+
+                if (cursor != null) {
+                    int timeColumn =
+                        cursor.getColumnIndexOrThrow("created_at");
+
+                    int amountColumn =
+                        cursor.getColumnIndexOrThrow("amount");
+
+                    while (cursor.moveToNext()) {
+                        long time = cursor.getLong(timeColumn);
+                        long amount = cursor.getLong(amountColumn);
+
+                        for (int i = 0; i < 7; i++) {
+                            Calendar next = (Calendar)days[i].clone();
+                            next.add(Calendar.DAY_OF_YEAR, 1);
+
+                            if (time >= days[i].getTimeInMillis() &&
+                                time < next.getTimeInMillis()) {
+
+                                values[i] = safeAdd(values[i], amount);
+                                break;
+                            }
+                        }
+                    }
+                }
+
+            } catch (Exception ignored) {
+            } finally {
+                if (cursor != null) cursor.close();
+            }
+
+            long max = 1;
+
+            for (long value : values) {
+                max = Math.max(max, value);
+            }
+
+            float leftPad = dp(8);
+            float gap = dp(7);
+            float barW = (w - dp(16) - gap * 6) / 7f;
+            float base = h - dp(48);
+            float maxHeight = h - dp(105);
+
+            paint.setColor(muted());
+            paint.setStrokeWidth(dp(1));
+
+            canvas.drawLine(
+                dp(5),
+                base,
+                w - dp(5),
+                base,
+                paint
+            );
+
+            SimpleDateFormat dateFormat = new SimpleDateFormat(
+                "dd.MM",
+                Locale.getDefault()
+            );
+
+            SimpleDateFormat dayFormat = new SimpleDateFormat(
+                "EE",
+                Locale.getDefault()
+            );
+
+            for (int i = 0; i < 7; i++) {
+                float left = leftPad + i * (barW + gap);
+
+                float bh = (float)(
+                    ((double)values[i] / (double)max) * maxHeight
+                );
+
+                paint.setColor(accent());
+
+                canvas.drawRoundRect(
+                    left,
+                    base - bh,
+                    left + barW,
+                    base,
+                    dp(5),
+                    dp(5),
+                    paint
+                );
+
+                paint.setColor(fg());
+                paint.setTextSize(dp(9));
+                paint.setTextAlign(Paint.Align.CENTER);
+
+                String amount = values[i] > 0
+                    ? compactMoney(values[i])
+                    : "0";
+
+                canvas.drawText(
+                    amount,
+                    left + barW / 2,
+                    Math.max(dp(12), base - bh - dp(5)),
+                    paint
+                );
+
+                paint.setTextSize(dp(9));
+
+                canvas.drawText(
+                    dayFormat.format(days[i].getTime()),
+                    left + barW / 2,
+                    h - dp(27),
+                    paint
+                );
+
+                canvas.drawText(
+                    dateFormat.format(days[i].getTime()),
+                    left + barW / 2,
+                    h - dp(10),
+                    paint
+                );
+            }
+
+            paint.setTextAlign(Paint.Align.LEFT);
+        }
+    }
+
+    private String compactMoney(long value) {
+        if (value >= 1000000) {
+            return String.format(
+                Locale.US,
+                "%.1fм",
+                value / 1000000.0
+            );
+        }
+
+        if (value >= 1000) {
+            return String.format(
+                Locale.US,
+                "%.0fк",
+                value / 1000.0
+            );
+        }
+
+        return String.valueOf(value);
+    }
+
+    private void showThemes() {
+        heading(
+            "Оформление",
+            "Выбери цветовую тему приложения"
+        );
+
+        String[] names = {
+            "Фиолетовая", "Белая", "Чёрная", "Красная",
+            "Зелёная", "Жёлтая", "Синяя", "Голубая",
+            "Розовая", "Оранжевая"
+        };
+
+        for (int i = 0; i < names.length; i++) {
+            final int index = i;
+
+            LinearLayout row = new LinearLayout(this);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setPadding(dp(12), dp(10), dp(12), dp(10));
+            row.setBackground(shape(cardColor(), 14));
+
+            LinearLayout.LayoutParams rp =
+                new LinearLayout.LayoutParams(-1, dp(56));
+
+            rp.topMargin = dp(7);
+            content.addView(row, rp);
+
+            View swatch = new View(this);
+            swatch.setBackground(shape(accents[i], 30));
+
+            row.addView(
+                swatch,
+                new LinearLayout.LayoutParams(dp(30), dp(30))
+            );
+
+            TextView name = text(
+                names[i],
+                15, fg(), true
+            );
+
+            LinearLayout.LayoutParams np =
+                new LinearLayout.LayoutParams(0, -2, 1);
+
+            np.leftMargin = dp(12);
+            row.addView(name, np);
+
+            TextView selected = text(
+                prefs.getInt("theme", 0) == i ? "✓" : "›",
+                22, accents[i], true
+            );
+
+            row.addView(selected);
+
+            row.setOnClickListener(v -> {
+                prefs.edit()
+                    .putInt("theme", index)
+                    .apply();
+
+                renderPage();
+            });
+        }
+    }
+
+    private void showSettings() {
+        heading(
+            "Настройки",
+            "Управление приложением и внешним видом"
+        );
+
+        LinearLayout sound = card();
+
+        sound.addView(text(
+            "ЗВУК И ВИБРАЦИЯ",
+            14, fg(), true
+        ));
+
+        addSwitch(
+            sound,
+            "Звуки приложения",
+            "sound_enabled",
+            true
+        );
+
+        addSwitch(
+            sound,
+            "Вибрация",
+            "vibration_enabled",
+            true
+        );
+
+        addSeekBar(
+            sound,
+            "Громкость звуков",
+            "sound_volume",
+            0,
+            100,
+            70
+        );
+
+        LinearLayout panel = card();
+
+        panel.addView(text(
+            "ПЛАВАЮЩАЯ ПАНЕЛЬ",
+            14, fg(), true
+        ));
+
+        addSeekBar(
+            panel,
+            "Размер панели",
+            "panel_size",
+            70,
+            130,
+            100
+        );
+
+        addSeekBar(
+            panel,
+            "Прозрачность панели",
+            "panel_opacity",
+            30,
+            100,
+            100
+        );
+
+        addSwitch(
+            panel,
+            "Показывать панель поверх игры",
+            "panel_enabled",
+            false
+        );
+
+        LinearLayout appearance = card();
+
+        appearance.addView(text(
+            "ОФОРМЛЕНИЕ",
+            14, fg(), true
+        ));
+
+        appearance.addView(text(
+            "Выбор темы приложения находится здесь, внутри настроек.",
+            12, muted(), false
+        ));
+
+        Button themes = button(
+            "ВЫБРАТЬ ТЕМУ",
+            accent()
+        );
+
+        appearance.addView(
+            themes,
+            new LinearLayout.LayoutParams(-1, dp(46))
+        );
+
+        themes.setOnClickListener(v -> {
+            page = "theme";
+            renderPage();
+        });
+
+        LinearLayout notifications = card();
+
+        notifications.addView(text(
+            "УВЕДОМЛЕНИЯ",
+            14, fg(), true
+        ));
+
+        addSwitch(
+            notifications,
+            "Показывать уведомления",
+            "notifications_enabled",
+            true
+        );
+
+        LinearLayout home = card();
+
+        home.addView(text(
+            "ГЛАВНЫЙ ЭКРАН",
+            14, fg(), true
+        ));
+
+        Button customize = button(
+            "НАСТРОИТЬ БЛОКИ ГЛАВНОГО ЭКРАНА",
+            accent()
+        );
+
+        home.addView(
+            customize,
+            new LinearLayout.LayoutParams(-1, dp(48))
+        );
+
+        customize.setOnClickListener(
+            v -> showHomeCustomization()
+        );
+
+        LinearLayout reset = card();
+
+        reset.addView(text(
+            "СБРОС НАСТРОЕК",
+            14, fg(), true
+        ));
+
+        reset.addView(text(
+            "Вернуть стандартные параметры приложения. " +
+            "Статистика и история рейсов останутся без изменений.",
+            13, muted(), false
+        ));
+
+        Button resetButton = button(
+            "СБРОСИТЬ НАСТРОЙКИ",
+            cardColor()
+        );
+
+        reset.addView(
+            resetButton,
+            new LinearLayout.LayoutParams(-1, dp(46))
+        );
+
+        resetButton.setOnClickListener(
+            v -> confirmSettingsReset()
+        );
+
+        LinearLayout fullReset = card();
+
+        fullReset.addView(text(
+            "ПОЛНЫЙ СБРОС ПРИЛОЖЕНИЯ",
+            14, fg(), true
+        ));
+
+        fullReset.addView(text(
+            "Удалит баланс, статистику, историю кругов, историю смен " +
+            "и пользовательские цели. Это действие нельзя отменить.",
+            13, muted(), false
+        ));
+
+        Button fullResetButton = button(
+            "УДАЛИТЬ ВСЕ ДАННЫЕ",
+            0xFFB84040
+        );
+
+        fullReset.addView(
+            fullResetButton,
+            new LinearLayout.LayoutParams(-1, dp(46))
+        );
+
+        fullResetButton.setOnClickListener(
+            v -> confirmFullReset()
+        );
+    }
+
+    private void addSwitch(
+        LinearLayout parent,
+        String title,
+        String key,
+        boolean defaultValue
+    ) {
+        Switch sw = new Switch(this);
+
+        sw.setText(title);
+        sw.setTextColor(fg());
+        sw.setTextSize(14);
+
+        sw.setChecked(
+            prefs.getBoolean(key, defaultValue)
+        );
+
+        sw.setOnCheckedChangeListener((button, checked) -> {
+            if ("panel_enabled".equals(key)) {
+                setOverlayEnabled(checked);
+            } else {
+                prefs.edit()
+                    .putBoolean(key, checked)
+                    .apply();
+            }
+
+            playUiFeedback(checked);
+        });
+
+        LinearLayout.LayoutParams p =
+            new LinearLayout.LayoutParams(-1, dp(48));
+
+        parent.addView(sw, p);
+    }
+
+    private void addSeekBar(
+        LinearLayout parent,
+        String title,
+        String key,
+        int min,
+        int max,
+        int defaultValue
+    ) {
+        TextView label = text(
+            title + ": " + prefs.getInt(key, defaultValue),
+            13, fg(), true
+        );
+
+        parent.addView(label);
+
+        SeekBar seek = new SeekBar(this);
+        seek.setMax(max - min);
+
+        seek.setProgress(
+            Math.max(
+                0,
+                Math.min(
+                    max - min,
+                    prefs.getInt(key, defaultValue) - min
+                )
+            )
+        );
+
+        seek.setProgressTintList(
+            ColorStateList.valueOf(accent())
+        );
+
+        seek.setOnSeekBarChangeListener(
+            new SeekBar.OnSeekBarChangeListener() {
+                @Override
+                public void onProgressChanged(
+                    SeekBar bar,
+                    int progress,
+                    boolean fromUser
+                ) {
+                    int value = min + progress;
+
+                    label.setText(
+                        title + ": " + value
+                    );
+
+                    if (fromUser) {
+                        prefs.edit()
+                            .putInt(key, value)
+                            .apply();
+                    }
+                }
+
+                @Override
+                public void onStartTrackingTouch(SeekBar bar) {}
+
+                @Override
+                public void onStopTrackingTouch(SeekBar bar) {}
+            }
+        );
+
+        parent.addView(seek);
+    }
+
+    private void confirmSettingsReset() {
+        new AlertDialog.Builder(this)
+            .setTitle("Сбросить настройки?")
+            .setMessage(
+                "Настройки приложения вернутся к стандартным: " +
+                "выплата, цель, тема, звуки, вибрация, панель, " +
+                "уведомления и блоки главного экрана. Баланс, " +
+                "статистика, история рейсов, история смен и " +
+                "сохранённые пользовательские цели останутся " +
+                "без изменений."
+            )
+            .setNegativeButton("Отмена", null)
+            .setPositiveButton("Сбросить настройки", (d, w) -> {
+                stopService(
+                    new Intent(this, FloatingPanelService.class)
+                );
+
+                boolean saved =
+                    new AppPrefs(this).resetSettingsToDefaults();
+
+                if (!saved) {
+                    Toast.makeText(
+                        this,
+                        "Не удалось сохранить настройки по умолчанию",
+                        Toast.LENGTH_LONG
+                    ).show();
+                    return;
+                }
+
+                buildBase();
+                renderPage();
+
+                Toast.makeText(
+                    this,
+                    "Настройки восстановлены. История и цели сохранены.",
+                    Toast.LENGTH_SHORT
+                ).show();
+            })
+            .show();
+    }
+
+    private void confirmFullReset() {
+        new AlertDialog.Builder(this)
+            .setTitle("Полностью удалить данные?")
+            .setMessage(
+                "Будут удалены общий баланс, все круги, статистика, " +
+                "история рейсов, завершённые смены, пользовательские " +
+                "цели и настройки. Восстановить данные после этого " +
+                "будет нельзя. Обычный сброс настроек этого не делает."
+            )
+            .setNegativeButton("Отмена", null)
+            .setPositiveButton("УДАЛИТЬ ВСЁ", (d, w) -> {
+                stopService(
+                    new Intent(this, FloatingPanelService.class)
+                );
+
+                handler.removeCallbacks(ticker);
+
+                boolean cleared =
+                    repository.clearAllApplicationData();
+
+                if (!cleared) {
+                    Toast.makeText(
+                        this,
+                        "Полный сброс завершился не полностью. " +
+                        "SQLite и настройки — отдельные хранилища; " +
+                        "проверь данные.",
+                        Toast.LENGTH_LONG
+                    ).show();
+                    return;
+                }
+
+                selectedStatsDay = 0L;
+
+                syncData();
+                buildBase();
+                renderPage();
+
+                Toast.makeText(
+                    this,
+                    "Все данные приложения удалены.",
+                    Toast.LENGTH_LONG
+                ).show();
+            })
+            .show();
+    }
+
+    private void showHomeCustomization() {
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(1);
+        box.setPadding(dp(18), dp(8), dp(18), 0);
+
+        CheckBox[] checks = new CheckBox[blockKeys.length];
+
+        for (int i = 0; i < blockKeys.length; i++) {
+            checks[i] = new CheckBox(this);
+            checks[i].setText(blockNames[i]);
+            checks[i].setTextColor(fg());
+            checks[i].setChecked(
+                blockVisible(blockKeys[i])
+            );
+            box.addView(checks[i]);
+        }
+
+        new AlertDialog.Builder(this)
+            .setTitle("Блоки главного экрана")
+            .setView(box)
+            .setNegativeButton("Отмена", null)
+            .setPositiveButton("Сохранить", (d, w) -> {
+                SharedPreferences.Editor e = prefs.edit();
+
+                for (int i = 0; i < blockKeys.length; i++) {
+                    e.putBoolean(
+                        "home_block_" + blockKeys[i],
+                        checks[i].isChecked()
+                    );
+                }
+
+                e.apply();
+
+                renderPage();
+
+                Toast.makeText(
+                    this,
+                    "Главный экран обновлён",
+                    Toast.LENGTH_SHORT
+                ).show();
+            })
+            .show();
+    }
+
+    private long safeAdd(long a, long b) {
+        if (b > 0 && a > Long.MAX_VALUE - b) {
+            return Long.MAX_VALUE;
+        }
+
+        if (b < 0 && a < Long.MIN_VALUE - b) {
+            return Long.MIN_VALUE;
+        }
+
+        return a + b;
+    }
+
+    private long safeMultiply(long a, long b) {
+        if (a <= 0 || b <= 0) return 0;
+
+        if (a > Long.MAX_VALUE / b) {
+            return Long.MAX_VALUE;
+        }
+
+        return a * b;
+    }
+
+    private String formatTime(long sec) {
+        return String.format(
+            Locale.US,
+            "%02d:%02d:%02d",
+            sec / 3600,
+            (sec % 3600) / 60,
+            sec % 60
+        );
+    }
+
+    private void setOverlayEnabled(boolean enabled) {
+        if (enabled) {
+            if (Build.VERSION.SDK_INT >= 23 &&
+                !Settings.canDrawOverlays(this)) {
+
+                Toast.makeText(
+                    this,
+                    "Разреши отображение поверх других окон",
+                    Toast.LENGTH_LONG
+                ).show();
+
+                Intent i = new Intent(
+                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    android.net.Uri.parse(
+                        "package:" + getPackageName()
+                    )
+                );
+
+                startActivity(i);
+
+                prefs.edit()
+                    .putBoolean("panel_enabled", false)
+                    .apply();
+
+                renderPage();
+                return;
+            }
+
+            try {
+                startService(
+                    new Intent(this, FloatingPanelService.class)
+                );
+
+                prefs.edit()
+                    .putBoolean("panel_enabled", true)
+                    .apply();
+
+            } catch (Exception e) {
+                Toast.makeText(
+                    this,
+                    "Не удалось включить плавающую панель",
+                    Toast.LENGTH_LONG
+                ).show();
+            }
+
+        } else {
+            stopService(
+                new Intent(this, FloatingPanelService.class)
+            );
+
+            prefs.edit()
+                .putBoolean("panel_enabled", false)
+                .apply();
+        }
+
+        renderPage();
+    }
+
+    private void toggleOverlay() {
+        boolean enabled =
+            prefs.getBoolean("panel_enabled", false);
+
+        setOverlayEnabled(!enabled);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        syncData();
+        renderPage();
+
+        if (running) {
+            handler.removeCallbacks(ticker);
+            handler.post(ticker);
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        handler.removeCallbacks(ticker);
+
+        if (prefs != null && listener != null) {
+            prefs.unregisterOnSharedPreferenceChangeListener(listener);
+        }
+
+        super.onDestroy();
+    }
+                    }
