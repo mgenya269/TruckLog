@@ -504,12 +504,9 @@ public class MainActivity extends Activity {
         }
 
         Button main;
-        if (!running && !isShiftStarted()) {
+        if (!isShiftStarted()) {
             main = button("НАЧАТЬ СМЕНУ", accent());
             main.setOnClickListener(v -> startTrip());
-        } else if (running) {
-            main = button("ЗАВЕРШИТЬ РЕЙС", accent());
-            main.setOnClickListener(v -> finishTrip());
         } else {
             main = button("СДЕЛАЛ КРУГ  +" + money(pay()) + " ₽", accent());
             main.setOnClickListener(v -> finishTrip());
@@ -518,10 +515,7 @@ public class MainActivity extends Activity {
         mp.topMargin = dp(14);
         content.addView(main, mp);
 
-        Button finishShift = button(
-            running ? "ЗАВЕРШИТЬ СМЕНУ (рейс отменится)" : "ЗАВЕРШИТЬ СМЕНУ",
-            cardColor()
-        );
+        Button finishShift = button("ЗАВЕРШИТЬ СМЕНУ", cardColor());
         finishShift.setBackground(outline(cardColor(), 14, accent()));
         LinearLayout.LayoutParams sp = new LinearLayout.LayoutParams(-1, dp(52));
         sp.topMargin = dp(8);
@@ -616,7 +610,6 @@ public class MainActivity extends Activity {
                 "Заработок: " + money(earned) + " ₽\n" +
                 "Кругов: " + shiftTrips + "\n" +
                 "Время: " + formatTime(seconds) + "\n\n" +
-                (running ? "Текущий незавершённый рейс будет отменён без выплаты.\n\n" : "") +
                 "Результаты будут сохранены в историю смен."
             )
             .setNegativeButton("Отмена", null)
@@ -788,7 +781,7 @@ public class MainActivity extends Activity {
         showInline("+" + money(amount) + " ₽ — круг засчитан");
     }
 
-    // ---------------- СТАТИСТИКА + сброс смены (П.2) ----------------
+    // ---------------- СТАТИСТИКА ----------------
 
     private void showStats() {
         heading("Статистика", "Результаты и личные рекорды");
@@ -916,43 +909,6 @@ public class MainActivity extends Activity {
         if (bestDayTime > 0) {
             records.addView(text(new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(new Date(bestDayTime)), 12, muted(), false));
         }
-        Button resetBest = button("СБРОСИТЬ ЛУЧШИЙ ДЕНЬ", cardColor());
-        resetBest.setBackground(outline(cardColor(), 14, 0xFFB84040));
-        resetBest.setTextColor(0xFFEF9A9A);
-        records.addView(resetBest, new LinearLayout.LayoutParams(-1, dp(44)));
-        resetBest.setOnClickListener(v -> {
-            prefs.edit().putLong("best_day_amount", 0L).putLong("best_day_time", 0L).apply();
-            renderPage();
-            showInline("Лучший день сброшен");
-        });
-
-        // П.2 — СБРОС СМЕНЫ ИЗ СТАТИСТИКИ
-        LinearLayout shiftCard = card();
-        shiftCard.addView(text("УПРАВЛЕНИЕ СМЕНОЙ", 14, fg(), true));
-        shiftCard.addView(text("Обнуляет текущий баланс, круги и таймер. История и графики не изменятся.", 12, muted(), false));
-        Button resetShiftBtn = button("СБРОСИТЬ ТЕКУЩУЮ СМЕНУ", cardColor());
-        resetShiftBtn.setBackground(outline(cardColor(), 14, 0xFFB84040));
-        resetShiftBtn.setTextColor(0xFFEF9A9A);
-        LinearLayout.LayoutParams rsb = new LinearLayout.LayoutParams(-1, dp(46));
-        rsb.topMargin = dp(8);
-        shiftCard.addView(resetShiftBtn, rsb);
-        resetShiftBtn.setOnClickListener(v -> showHomeResetDialog());
-
-        long shiftCount = 0, bestShift = 0;
-        Cursor shifts = null;
-        try {
-            shifts = repository.getShiftsHistory();
-            if (shifts != null) {
-                int earnedColumn = shifts.getColumnIndex("earned");
-                while (shifts.moveToNext()) {
-                    shiftCount++;
-                    if (earnedColumn >= 0) bestShift = Math.max(bestShift, shifts.getLong(earnedColumn));
-                }
-            }
-        } catch (Exception ignored) {
-        } finally {
-            if (shifts != null) shifts.close();
-        }
 
         LinearLayout daysCard = card();
         daysCard.addView(text("ПО ДНЯМ", 14, fg(), true));
@@ -1061,22 +1017,21 @@ public class MainActivity extends Activity {
         showThemedDialog(dialog);
     }
 
-    // ---------------- ИСТОРИЯ + сброс истории (П.3) ----------------
+    // ---------------- ИСТОРИЯ ----------------
 
     private void showHistory() {
         heading("История", "Смена, круги и время");
 
-        // П.3 — СБРОС ВСЕЙ ИСТОРИИ
         LinearLayout clearCard = card();
         clearCard.addView(text("УПРАВЛЕНИЕ ИСТОРИЕЙ", 14, fg(), true));
-        clearCard.addView(text("Удаляет все записи кругов и смен из базы. Баланс и счётчики не изменятся.", 12, muted(), false));
-        Button clearHistoryBtn = button("СТЕРЕТЬ ВСЮ ИСТОРИЮ", cardColor());
+        clearCard.addView(text("Удаляет записи кругов из базы по выбранным дням. Баланс и счётчики не изменятся.", 12, muted(), false));
+        Button clearHistoryBtn = button("СТЕРЕТЬ ИСТОРИЮ (ПО ДНЯМ)", cardColor());
         clearHistoryBtn.setBackground(outline(cardColor(), 14, 0xFFB84040));
         clearHistoryBtn.setTextColor(0xFFEF9A9A);
         LinearLayout.LayoutParams chp = new LinearLayout.LayoutParams(-1, dp(46));
         chp.topMargin = dp(8);
         clearCard.addView(clearHistoryBtn, chp);
-        clearHistoryBtn.setOnClickListener(v -> confirmClearHistory());
+        clearHistoryBtn.setOnClickListener(v -> showClearHistoryByDayDialog());
 
         long startedAt = prefs.getLong("last_shift_started_at", 0);
         long finishedAt = prefs.getLong("last_shift_finished_at", 0);
@@ -1173,23 +1128,79 @@ public class MainActivity extends Activity {
         }
     }
 
-    private void confirmClearHistory() {
+    private void showClearHistoryByDayDialog() {
+        HashMap<String, String> availableDays = new HashMap<>();
+        SimpleDateFormat dayKey = new SimpleDateFormat("yyyyMMdd", Locale.US);
+        SimpleDateFormat display = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault());
+
+        Cursor cursor = null;
+        try {
+            cursor = repository.getTripsHistory();
+            if (cursor != null) {
+                int timeColumn = cursor.getColumnIndexOrThrow("created_at");
+                while (cursor.moveToNext()) {
+                    long time = cursor.getLong(timeColumn);
+                    Calendar d = Calendar.getInstance();
+                    d.setTimeInMillis(time);
+                    String key = dayKey.format(d.getTime());
+                    if (!availableDays.containsKey(key)) {
+                        availableDays.put(key, display.format(d.getTime()));
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+        } finally {
+            if (cursor != null) cursor.close();
+        }
+
+        if (availableDays.isEmpty()) {
+            infoDialog("История", "Нет записей для удаления.");
+            return;
+        }
+
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(18), dp(8), dp(18), 0);
+
+        ScrollView scroll = new ScrollView(this);
+        scroll.addView(box);
+
+        ArrayList<String> sortedKeys = new ArrayList<>(availableDays.keySet());
+        Collections.sort(sortedKeys, Collections.reverseOrder());
+
+        final CheckBox[] checks = new CheckBox[sortedKeys.size()];
+        for (int i = 0; i < sortedKeys.size(); i++) {
+            String key = sortedKeys.get(i);
+            checks[i] = new CheckBox(this);
+            checks[i].setText(availableDays.get(key));
+            checks[i].setTextColor(fg());
+            checks[i].setButtonTintList(ColorStateList.valueOf(accent()));
+            box.addView(checks[i]);
+        }
+
         AlertDialog dialog = new AlertDialog.Builder(this)
-            .setTitle("Стереть всю историю?")
-            .setMessage("Будут удалены все записи кругов и завершённые смены из базы. Текущий баланс и счётчики останутся, но журнал «Смена начата / Круг / Закончил смену» очистится. Действие необратимо.")
+            .setTitle("Выбери дни для удаления")
+            .setView(scroll)
             .setNegativeButton("Отмена", null)
-            .setPositiveButton("Стереть", (d, w) -> {
+            .setPositiveButton("Удалить", (d, which) -> {
+                boolean any = false;
+                for (CheckBox c : checks) if (c.isChecked()) any = true;
+                if (!any) {
+                    showInline("Выбери хотя бы один день");
+                    return;
+                }
                 try {
-                    repository.clearTripsHistory();
-                    repository.clearShiftsHistory();
-                    prefs.edit()
-                        .remove("last_shift_started_at")
-                        .remove("last_shift_finished_at")
-                        .apply();
+                    for (int i = 0; i < sortedKeys.size(); i++) {
+                        if (checks[i].isChecked()) {
+                            long dayStart = dayKey.parse(sortedKeys.get(i)).getTime();
+                            long dayEnd = startOfDay(dayStart + 24L * 60 * 60 * 1000);
+                            repository.deleteTripsInRange(dayStart, dayEnd);
+                        }
+                    }
                     renderPage();
-                    showInline("История полностью стерта.");
+                    showInline("Выбранные дни удалены из истории.");
                 } catch (Exception e) {
-                    infoDialog("Ошибка", "Не удалось стереть историю.");
+                    infoDialog("Ошибка", "Не удалось удалить историю.");
                 }
             })
             .create();
@@ -1652,15 +1663,12 @@ public class MainActivity extends Activity {
         parent.addView(seek);
     }
 
-    // ---------------- СБРОС НАСТРОЕК (ИСПРАВЛЕНО) ----------------
-
     private void confirmSettingsReset() {
         AlertDialog dialog = new AlertDialog.Builder(this)
             .setTitle("Сбросить настройки?")
             .setMessage("Тема, настройки панели, звука, вибрации, уведомлений и главного экрана вернутся к стандартным. Статистика и история останутся.")
             .setNegativeButton("Отмена", null)
             .setPositiveButton("Сбросить", (d, w) -> {
-                // Пытаемся остановить сервис, но не падаем, если не получилось
                 try {
                     stopService(new Intent(this, FloatingPanelService.class));
                 } catch (Exception ignored) {}
@@ -1668,7 +1676,6 @@ public class MainActivity extends Activity {
                 SharedPreferences.Editor e = prefs.edit();
                 e.putInt("theme", 0);
                 e.putBoolean("panel_enabled", false);
-
                 e.remove("sound_enabled");
                 e.remove("sound_volume");
                 e.remove("vibration_enabled");
@@ -1679,7 +1686,6 @@ public class MainActivity extends Activity {
                 e.remove("notifications_enabled");
                 e.remove("trip_finish_notifications");
                 e.remove("shift_start_notifications");
-
                 e.remove("home_block_balance");
                 e.remove("home_block_rounds");
                 e.remove("home_block_payout");
@@ -1687,7 +1693,6 @@ public class MainActivity extends Activity {
                 e.remove("home_block_overlay");
                 e.remove("home_block_order");
 
-                // ВАЖНО: commit(), а не apply() — чтобы изменения записались сразу
                 boolean saved = e.commit();
 
                 if (!saved) {
@@ -1695,7 +1700,6 @@ public class MainActivity extends Activity {
                     return;
                 }
 
-                // Принудительно перестраиваем интерфейс с темой по умолчанию
                 rebuildBase();
                 showInline("Настройки сброшены");
             })
@@ -1795,4 +1799,4 @@ public class MainActivity extends Activity {
         }
         super.onDestroy();
     }
-            }
+                }
