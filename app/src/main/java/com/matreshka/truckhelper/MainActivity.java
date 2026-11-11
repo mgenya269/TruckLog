@@ -788,6 +788,8 @@ public class MainActivity extends Activity {
         showInline("+" + money(amount) + " ₽ — круг засчитан");
     }
 
+    // ---------------- СТАТИСТИКА + сброс смены (П.2) ----------------
+
     private void showStats() {
         heading("Статистика", "Результаты и личные рекорды");
 
@@ -924,6 +926,18 @@ public class MainActivity extends Activity {
             showInline("Лучший день сброшен");
         });
 
+        // П.2 — СБРОС СМЕНЫ ИЗ СТАТИСТИКИ
+        LinearLayout shiftCard = card();
+        shiftCard.addView(text("УПРАВЛЕНИЕ СМЕНОЙ", 14, fg(), true));
+        shiftCard.addView(text("Обнуляет текущий баланс, круги и таймер. История и графики не изменятся.", 12, muted(), false));
+        Button resetShiftBtn = button("СБРОСИТЬ ТЕКУЩУЮ СМЕНУ", cardColor());
+        resetShiftBtn.setBackground(outline(cardColor(), 14, 0xFFB84040));
+        resetShiftBtn.setTextColor(0xFFEF9A9A);
+        LinearLayout.LayoutParams rsb = new LinearLayout.LayoutParams(-1, dp(46));
+        rsb.topMargin = dp(8);
+        shiftCard.addView(resetShiftBtn, rsb);
+        resetShiftBtn.setOnClickListener(v -> showHomeResetDialog());
+
         long shiftCount = 0, bestShift = 0;
         Cursor shifts = null;
         try {
@@ -939,10 +953,6 @@ public class MainActivity extends Activity {
         } finally {
             if (shifts != null) shifts.close();
         }
-        LinearLayout shiftCard = card();
-        shiftCard.addView(text("СМЕНЫ", 14, fg(), true));
-        shiftCard.addView(text("Всего смен: " + shiftCount, 13, muted(), false));
-        shiftCard.addView(text("Лучшая смена: " + money(bestShift) + " ₽", 13, accent(), true));
 
         LinearLayout daysCard = card();
         daysCard.addView(text("ПО ДНЯМ", 14, fg(), true));
@@ -1051,8 +1061,22 @@ public class MainActivity extends Activity {
         showThemedDialog(dialog);
     }
 
+    // ---------------- ИСТОРИЯ + сброс истории (П.3) ----------------
+
     private void showHistory() {
         heading("История", "Смена, круги и время");
+
+        // П.3 — СБРОС ВСЕЙ ИСТОРИИ
+        LinearLayout clearCard = card();
+        clearCard.addView(text("УПРАВЛЕНИЕ ИСТОРИЕЙ", 14, fg(), true));
+        clearCard.addView(text("Удаляет все записи кругов и смен из базы. Баланс и счётчики не изменятся.", 12, muted(), false));
+        Button clearHistoryBtn = button("СТЕРЕТЬ ВСЮ ИСТОРИЮ", cardColor());
+        clearHistoryBtn.setBackground(outline(cardColor(), 14, 0xFFB84040));
+        clearHistoryBtn.setTextColor(0xFFEF9A9A);
+        LinearLayout.LayoutParams chp = new LinearLayout.LayoutParams(-1, dp(46));
+        chp.topMargin = dp(8);
+        clearCard.addView(clearHistoryBtn, chp);
+        clearHistoryBtn.setOnClickListener(v -> confirmClearHistory());
 
         long startedAt = prefs.getLong("last_shift_started_at", 0);
         long finishedAt = prefs.getLong("last_shift_finished_at", 0);
@@ -1147,6 +1171,29 @@ public class MainActivity extends Activity {
             endCard.addView(text("Смена идёт", 16, accent(), true));
             endCard.addView(text("Ещё не завершена", 13, muted(), false));
         }
+    }
+
+    private void confirmClearHistory() {
+        AlertDialog dialog = new AlertDialog.Builder(this)
+            .setTitle("Стереть всю историю?")
+            .setMessage("Будут удалены все записи кругов и завершённые смены из базы. Текущий баланс и счётчики останутся, но журнал «Смена начата / Круг / Закончил смену» очистится. Действие необратимо.")
+            .setNegativeButton("Отмена", null)
+            .setPositiveButton("Стереть", (d, w) -> {
+                try {
+                    repository.clearTripsHistory();
+                    repository.clearShiftsHistory();
+                    prefs.edit()
+                        .remove("last_shift_started_at")
+                        .remove("last_shift_finished_at")
+                        .apply();
+                    renderPage();
+                    showInline("История полностью стерта.");
+                } catch (Exception e) {
+                    infoDialog("Ошибка", "Не удалось стереть историю.");
+                }
+            })
+            .create();
+        showThemedDialog(dialog);
     }
 
     private void showDaysBreakdown(HashMap<String, Long> counts, HashMap<String, Long> amounts) {
@@ -1460,12 +1507,9 @@ public class MainActivity extends Activity {
         }
     }
 
-    // ---------------- ЕЩЁ (настройки) — ОФОРМЛЕНИЕ ОТДЕЛЬНОЙ КАРТОЧКОЙ ----------------
-
     private void showSettings() {
         heading("Ещё", "Настройки и оформление");
 
-        // ОФОРМЛЕНИЕ — отдельной карточкой сверху
         LinearLayout themeCard = card();
         themeCard.addView(text("ОФОРМЛЕНИЕ", 12, muted(), true));
         themeCard.addView(text("Выбери цветовую тему приложения", 13, muted(), false));
@@ -1608,16 +1652,23 @@ public class MainActivity extends Activity {
         parent.addView(seek);
     }
 
+    // ---------------- СБРОС НАСТРОЕК (ИСПРАВЛЕНО) ----------------
+
     private void confirmSettingsReset() {
         AlertDialog dialog = new AlertDialog.Builder(this)
             .setTitle("Сбросить настройки?")
             .setMessage("Тема, настройки панели, звука, вибрации, уведомлений и главного экрана вернутся к стандартным. Статистика и история останутся.")
             .setNegativeButton("Отмена", null)
             .setPositiveButton("Сбросить", (d, w) -> {
-                stopService(new Intent(this, FloatingPanelService.class));
+                // Пытаемся остановить сервис, но не падаем, если не получилось
+                try {
+                    stopService(new Intent(this, FloatingPanelService.class));
+                } catch (Exception ignored) {}
+
                 SharedPreferences.Editor e = prefs.edit();
                 e.putInt("theme", 0);
                 e.putBoolean("panel_enabled", false);
+
                 e.remove("sound_enabled");
                 e.remove("sound_volume");
                 e.remove("vibration_enabled");
@@ -1628,14 +1679,24 @@ public class MainActivity extends Activity {
                 e.remove("notifications_enabled");
                 e.remove("trip_finish_notifications");
                 e.remove("shift_start_notifications");
+
                 e.remove("home_block_balance");
                 e.remove("home_block_rounds");
                 e.remove("home_block_payout");
                 e.remove("home_block_timer");
                 e.remove("home_block_overlay");
                 e.remove("home_block_order");
-                e.apply();
-                renderPage();
+
+                // ВАЖНО: commit(), а не apply() — чтобы изменения записались сразу
+                boolean saved = e.commit();
+
+                if (!saved) {
+                    infoDialog("Сброс не выполнен", "Не удалось сохранить настройки. Попробуй ещё раз.");
+                    return;
+                }
+
+                // Принудительно перестраиваем интерфейс с темой по умолчанию
+                rebuildBase();
                 showInline("Настройки сброшены");
             })
             .create();
