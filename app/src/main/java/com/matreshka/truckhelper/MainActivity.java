@@ -33,7 +33,6 @@ public class MainActivity extends Activity {
     private FrameLayout frame;
     private LinearLayout bottomNav;
     private String page = "home";
-    private String morePage = "settings";
 
     private TextView timerView;
     private TextView inlineMessage;
@@ -86,35 +85,20 @@ public class MainActivity extends Activity {
         0xFFD08FB5, 0xFFD0A58F
     };
 
-    private int theme() {
-        return Math.max(0, Math.min(9, prefs.getInt("theme", 0)));
-    }
-
+    private int theme() { return Math.max(0, Math.min(9, prefs.getInt("theme", 0))); }
     private int accent() { return accents[theme()]; }
     private int background() { return backgrounds[theme()]; }
     private int cardColor() { return cards[theme()]; }
     private int fg() { return foregrounds[theme()]; }
     private int muted() { return mutedColors[theme()]; }
 
-    private int pay() {
-        return Math.max(1, prefs.getInt("pay", 15000));
-    }
-
-    private long goal() {
-        return Math.max(1L, prefs.getLong("goal", 5000000L));
-    }
-
-    private long read(String key) {
-        return prefs.getLong(key, 0);
-    }
+    private int pay() { return Math.max(1, prefs.getInt("pay", 15000)); }
+    private long goal() { return Math.max(1L, prefs.getLong("goal", 5000000L)); }
+    private long read(String key) { return prefs.getLong(key, 0); }
 
     private String money(long n) {
-        if (prefs.getBoolean("currency_compact", false)) {
-            return compactMoney(n);
-        }
-        return NumberFormat.getIntegerInstance(
-            new Locale("ru", "RU")
-        ).format(n);
+        if (prefs.getBoolean("currency_compact", false)) return compactMoney(n);
+        return NumberFormat.getIntegerInstance(new Locale("ru", "RU")).format(n);
     }
 
     private int dp(float n) {
@@ -194,18 +178,13 @@ public class MainActivity extends Activity {
 
     private void infoDialog(String title, String message) {
         AlertDialog d = new AlertDialog.Builder(this)
-            .setTitle(title)
-            .setMessage(message)
-            .setPositiveButton("ОК", null)
-            .create();
+            .setTitle(title).setMessage(message)
+            .setPositiveButton("ОК", null).create();
         showThemedDialog(d);
     }
 
     private void showInline(String message) {
-        if (inlineMessage == null) {
-            infoDialog("TruckLog", message);
-            return;
-        }
+        if (inlineMessage == null) { infoDialog("TruckLog", message); return; }
         inlineMessage.setText(message);
         inlineMessage.setVisibility(View.VISIBLE);
         handler.postDelayed(() -> {
@@ -292,7 +271,7 @@ public class MainActivity extends Activity {
         running = prefs.getBoolean("running", false);
     }
 
-    // ---------------- КАРКАС: шапка + контент + нижняя навигация ----------------
+    // ---------------- КАРКАС ----------------
 
     private void buildBase() {
         frame = new FrameLayout(this);
@@ -318,13 +297,11 @@ public class MainActivity extends Activity {
 
         root.addView(header);
 
-        // Инлайн-сообщение
         inlineMessage = text("", 13, accent(), true);
         inlineMessage.setVisibility(View.GONE);
         inlineMessage.setPadding(dp(20), dp(6), dp(20), dp(6));
         root.addView(inlineMessage);
 
-        // Скролл контента
         ScrollView scroll = new ScrollView(this);
         scroll.setFillViewport(true);
         content = new LinearLayout(this);
@@ -333,38 +310,63 @@ public class MainActivity extends Activity {
         scroll.addView(content);
         root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
 
-        // Нижняя навигация
+        // Нижняя навигация (5 вкладок)
         bottomNav = new LinearLayout(this);
         bottomNav.setOrientation(0);
         bottomNav.setBackground(shape(cardColor(), 0));
-        bottomNav.setPadding(dp(8), dp(8), dp(8), dp(12));
+        bottomNav.setPadding(dp(6), dp(8), dp(6), dp(8));
         bottomNav.setGravity(Gravity.CENTER);
 
         addNavItem("⌂", "Главная", "home");
-        addNavItem("▦", "Статистика", "stats");
+        addNavItem("▦", "Стата", "stats");
         addNavItem("◷", "История", "history");
-        addNavItem("⚙", "Ещё", "more");
+        addNavItem("◎", "Цели", "calculator");
+        addNavItem("⚙", "Ещё", "settings");
 
-        root.addView(bottomNav, new LinearLayout.LayoutParams(-1, dp(70)));
+        root.addView(bottomNav, new LinearLayout.LayoutParams(-1, dp(66)));
+
+        // **ИНСЕТЫ** — синхронизация с системной панелью навигации
+        if (Build.VERSION.SDK_INT >= 21) {
+            root.setOnApplyWindowInsetsListener((v, insets) -> {
+                int top = insets.getSystemWindowInsetTop();
+                int bottom = insets.getSystemWindowInsetBottom();
+
+                // Шапка не должна залезать под статус-бар
+                if (header.getChildCount() > 0) {
+                    header.setPadding(dp(20), dp(18) + top, dp(20), dp(10));
+                }
+
+                // Bottom nav не должна перекрываться системной панелью
+                if (bottomNav != null) {
+                    bottomNav.setPadding(dp(6), dp(8), dp(6), dp(8) + bottom);
+                }
+
+                return insets;
+            });
+        }
 
         frame.addView(root);
         setContentView(frame);
+
+        // Запросить применение insets
+        if (Build.VERSION.SDK_INT >= 21) {
+            root.requestApplyInsets();
+        }
     }
 
     private void addNavItem(String icon, String title, String target) {
         LinearLayout item = new LinearLayout(this);
         item.setOrientation(1);
         item.setGravity(Gravity.CENTER);
-        item.setPadding(dp(6), dp(4), dp(6), dp(4));
+        item.setPadding(dp(4), dp(4), dp(4), dp(4));
 
-        boolean active = target.equals(page) ||
-            ("more".equals(target) && isMorePage());
+        boolean active = target.equals(page);
 
-        TextView iconView = text(icon, 20, active ? accent() : muted(), true);
+        TextView iconView = text(icon, 19, active ? accent() : muted(), true);
         iconView.setGravity(Gravity.CENTER);
         item.addView(iconView);
 
-        TextView titleView = text(title, 10, active ? accent() : muted(), true);
+        TextView titleView = text(title, 9, active ? accent() : muted(), true);
         titleView.setGravity(Gravity.CENTER);
         item.addView(titleView);
 
@@ -372,27 +374,20 @@ public class MainActivity extends Activity {
         bottomNav.addView(item, lp);
 
         item.setOnClickListener(v -> {
-            if ("more".equals(target)) {
-                page = morePage;
-            } else {
-                page = target;
-            }
+            page = target;
             rebuildBottomNav();
             renderPage();
         });
-    }
-
-    private boolean isMorePage() {
-        return "settings".equals(page) || "theme".equals(page) || "calculator".equals(page) || "charts".equals(page);
     }
 
     private void rebuildBottomNav() {
         if (bottomNav == null) return;
         bottomNav.removeAllViews();
         addNavItem("⌂", "Главная", "home");
-        addNavItem("▦", "Статистика", "stats");
+        addNavItem("▦", "Стата", "stats");
         addNavItem("◷", "История", "history");
-        addNavItem("⚙", "Ещё", "more");
+        addNavItem("◎", "Цели", "calculator");
+        addNavItem("⚙", "Ещё", "settings");
     }
 
     private void rebuildBase() {
@@ -438,21 +433,18 @@ public class MainActivity extends Activity {
         return prefs.getBoolean("home_block_" + key, true);
     }
 
-    // ---------------- ГЛАВНЫЙ ЭКРАН — «КОКПИТ» ----------------
+    // ---------------- ГЛАВНЫЙ ЭКРАН ----------------
 
     private void showHome() {
-        // Большой баланс
         LinearLayout hero = new LinearLayout(this);
         hero.setOrientation(1);
         hero.setPadding(dp(20), dp(20), dp(20), dp(20));
         hero.setBackground(shape(cardColor(), 24));
-
         LinearLayout.LayoutParams heroParams = new LinearLayout.LayoutParams(-1, -2);
         heroParams.topMargin = dp(8);
         content.addView(hero, heroParams);
 
         hero.addView(text("ТЕКУЩИЙ БАЛАНС", 12, muted(), true));
-
         TextView balanceView = text(money(balance) + " ₽", 40, fg(), true);
         LinearLayout.LayoutParams bv = new LinearLayout.LayoutParams(-1, -2);
         bv.topMargin = dp(6);
@@ -469,7 +461,6 @@ public class MainActivity extends Activity {
         bp.topMargin = dp(14);
         hero.addView(bar, bp);
 
-        // Мини-плитки: круги / выплата
         LinearLayout tiles = new LinearLayout(this);
         tiles.setOrientation(0);
         LinearLayout.LayoutParams tp = new LinearLayout.LayoutParams(-1, -2);
@@ -489,7 +480,6 @@ public class MainActivity extends Activity {
             tiles.addView(t2, lp2);
         }
 
-        // Таймер
         if (blockVisible("timer")) {
             LinearLayout timerCard = card();
             timerCard.addView(text("ТЕКУЩИЙ РЕЙС", 12, muted(), true));
@@ -503,7 +493,6 @@ public class MainActivity extends Activity {
             timerView = null;
         }
 
-        // Кнопка «Начать рейс» / «Сделал круг» (основная)
         Button main;
         if (!running && !isShiftStarted()) {
             main = button("НАЧАТЬ СМЕНУ", accent());
@@ -519,7 +508,6 @@ public class MainActivity extends Activity {
         mp.topMargin = dp(14);
         content.addView(main, mp);
 
-        // Кнопка «Завершить смену»
         Button finishShift = button(
             running ? "ЗАВЕРШИТЬ СМЕНУ (рейс отменится)" : "ЗАВЕРШИТЬ СМЕНУ",
             cardColor()
@@ -530,7 +518,6 @@ public class MainActivity extends Activity {
         content.addView(finishShift, sp);
         finishShift.setOnClickListener(v -> confirmFinishShift());
 
-        // Сброс
         Button resetStats = button("СБРОСИТЬ БАЛАНС И КРУГИ", cardColor());
         resetStats.setBackground(outline(cardColor(), 14, 0xFFB84040));
         resetStats.setTextColor(0xFFEF9A9A);
@@ -539,7 +526,6 @@ public class MainActivity extends Activity {
         content.addView(resetStats, rp);
         resetStats.setOnClickListener(v -> showHomeResetDialog());
 
-        // Панель
         if (blockVisible("overlay")) {
             Button overlay = button(
                 prefs.getBoolean("panel_enabled", false) ? "ПАНЕЛЬ ВКЛЮЧЕНА" : "ВКЛЮЧИТЬ ПАНЕЛЬ",
@@ -551,6 +537,18 @@ public class MainActivity extends Activity {
             content.addView(overlay, op);
             overlay.setOnClickListener(v -> toggleOverlay());
         }
+
+        // **ГРАФИКИ на главном** — компактная карточка
+        LinearLayout chartCard = card();
+        chartCard.addView(text("ГРАФИК ЗАРАБОТКА — 7 ДНЕЙ", 12, muted(), true));
+        chartCard.addView(
+            new EarningsChart(this),
+            new LinearLayout.LayoutParams(-1, dp(200))
+        );
+        Button openFull = button("ОТКРЫТЬ ПОЛНЫЙ ГРАФИК", cardColor());
+        openFull.setBackground(outline(cardColor(), 14, accent()));
+        chartCard.addView(openFull, new LinearLayout.LayoutParams(-1, dp(46)));
+        openFull.setOnClickListener(v -> { page = "charts"; rebuildBottomNav(); renderPage(); });
     }
 
     private LinearLayout miniTile(String title, String value, int valueColor) {
@@ -629,12 +627,9 @@ public class MainActivity extends Activity {
         long duration = Math.max(0L, read("seconds"));
 
         if (running) {
-            boolean stopped = prefs.edit()
-                .putBoolean("running", false)
-                .putLong("startAt", 0L)
-                .commit();
+            boolean stopped = prefs.edit().putBoolean("running", false).putLong("startAt", 0L).commit();
             if (!stopped) {
-                infoDialog("Смена не закрыта", "Не удалось остановить текущий рейс. Попробуй ещё раз.");
+                infoDialog("Смена не закрыта", "Не удалось остановить текущий рейс.");
                 return;
             }
             running = false;
@@ -686,7 +681,7 @@ public class MainActivity extends Activity {
                 "Заработок: " + money(earned) + " ₽, кругов: " + shiftTrips);
 
             infoDialog("Смена завершена!",
-                "Смена сохранена в историю.\n\nЗаработок: " + money(earned) + " ₽\nКругов: " + shiftTrips + "\nВремя: " + formatTime(duration));
+                "Заработок: " + money(earned) + " ₽\nКругов: " + shiftTrips + "\nВремя: " + formatTime(duration));
         } catch (Exception e) {
             infoDialog("Смена не сохранена", "Не удалось сохранить смену.");
         }
@@ -730,10 +725,7 @@ public class MainActivity extends Activity {
     };
 
     private void finishTrip() {
-        if (!isShiftStarted()) {
-            showInline("Сначала начни смену");
-            return;
-        }
+        if (!isShiftStarted()) { showInline("Сначала начни смену"); return; }
 
         long elapsed;
         long amount = pay();
@@ -746,10 +738,8 @@ public class MainActivity extends Activity {
             elapsed = 0L;
         }
 
-        if (balance > Long.MAX_VALUE - amount ||
-            trips == Long.MAX_VALUE ||
-            seconds > Long.MAX_VALUE - elapsed ||
-            shiftEarned > Long.MAX_VALUE - amount ||
+        if (balance > Long.MAX_VALUE - amount || trips == Long.MAX_VALUE ||
+            seconds > Long.MAX_VALUE - elapsed || shiftEarned > Long.MAX_VALUE - amount ||
             shiftTrips == Long.MAX_VALUE) {
             infoDialog("Предел счётчика", "Достигнут предел счётчика.");
             return;
@@ -895,7 +885,6 @@ public class MainActivity extends Activity {
         }
         all.addView(text("Серия дней: " + calculateStreak(allDays), 13, muted(), false));
 
-        // Лучший день
         LinearLayout records = card();
         records.addView(text("ЛИЧНЫЕ РЕКОРДЫ", 14, fg(), true));
         long bestDay = read("best_day_amount");
@@ -926,7 +915,6 @@ public class MainActivity extends Activity {
             showInline("Лучший день сброшен");
         });
 
-        // Смены
         long shiftCount = 0, bestShift = 0;
         Cursor shifts = null;
         try {
@@ -947,7 +935,6 @@ public class MainActivity extends Activity {
         shiftCard.addView(text("Всего смен: " + shiftCount, 13, muted(), false));
         shiftCard.addView(text("Лучшая смена: " + money(bestShift) + " ₽", 13, accent(), true));
 
-        // По дням
         LinearLayout daysCard = card();
         daysCard.addView(text("ПО ДНЯМ", 14, fg(), true));
         SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault());
@@ -1178,7 +1165,7 @@ public class MainActivity extends Activity {
         showThemedDialog(d);
     }
 
-    // ---------------- КАЛЬКУЛЯТОР ----------------
+    // ---------------- ЦЕЛИ ----------------
 
     private JSONArray getGoals() {
         try {
@@ -1325,9 +1312,15 @@ public class MainActivity extends Activity {
     private void showCharts() {
         heading("Графики", "Заработок за 7 дней");
         LinearLayout c = card();
-        c.addView(new EarningsChart(this), new LinearLayout.LayoutParams(-1, dp(270)));
+        c.addView(new EarningsChart(this), new LinearLayout.LayoutParams(-1, dp(300)));
         LinearLayout info = card();
         info.addView(text("Источник: сохранённая история рейсов.", 13, muted(), false));
+        Button back = button("НАЗАД НА ГЛАВНУЮ", cardColor());
+        back.setBackground(outline(cardColor(), 14, accent()));
+        LinearLayout.LayoutParams bp = new LinearLayout.LayoutParams(-1, dp(46));
+        bp.topMargin = dp(12);
+        content.addView(back, bp);
+        back.setOnClickListener(v -> { page = "home"; rebuildBottomNav(); renderPage(); });
     }
 
     private class EarningsChart extends View {
@@ -1447,26 +1440,19 @@ public class MainActivity extends Activity {
         }
     }
 
-    // ---------------- НАСТРОЙКИ / ЕЩЁ ----------------
+    // ---------------- ЕЩЁ (настройки) ----------------
 
     private void showSettings() {
-        heading("Ещё", "Настройки и разделы");
+        heading("Ещё", "Настройки и оформление");
 
-        // Быстрые переходы
         LinearLayout quick = card();
-        quick.addView(text("БЫСТРЫЕ ПЕРЕХОДЫ", 12, muted(), true));
-
-        Button toCalc = button("◎  Калькулятор целей", cardColor());
-        quick.addView(toCalc, new LinearLayout.LayoutParams(-1, dp(46)));
-        toCalc.setOnClickListener(v -> { morePage = "calculator"; page = "calculator"; rebuildBottomNav(); renderPage(); });
-
+        quick.addView(text("ПЕРЕЙТИ", 12, muted(), true));
         Button toCharts = button("▤  Графики заработка", cardColor());
         quick.addView(toCharts, new LinearLayout.LayoutParams(-1, dp(46)));
-        toCharts.setOnClickListener(v -> { morePage = "charts"; page = "charts"; rebuildBottomNav(); renderPage(); });
-
+        toCharts.setOnClickListener(v -> { page = "charts"; rebuildBottomNav(); renderPage(); });
         Button toThemes = button("🎨  Оформление", cardColor());
         quick.addView(toThemes, new LinearLayout.LayoutParams(-1, dp(46)));
-        toThemes.setOnClickListener(v -> { morePage = "theme"; page = "theme"; rebuildBottomNav(); renderPage(); });
+        toThemes.setOnClickListener(v -> { page = "theme"; rebuildBottomNav(); renderPage(); });
 
         LinearLayout sound = card();
         sound.addView(text("ЗВУК И ВИБРАЦИЯ", 12, muted(), true));
@@ -1727,4 +1713,4 @@ public class MainActivity extends Activity {
         }
         super.onDestroy();
     }
-                                      }
+    }
