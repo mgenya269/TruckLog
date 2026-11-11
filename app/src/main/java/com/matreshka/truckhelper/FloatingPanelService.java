@@ -29,6 +29,10 @@ public class FloatingPanelService extends Service {
     private static final String KEY_PANEL_X = "panel_window_x";
     private static final String KEY_PANEL_Y = "panel_window_y";
 
+    private static final String NOTIF_CHANNEL = "trucklog_panel";
+    private static final int NOTIF_ROUND = 2001;
+    private static final int NOTIF_UNDO = 2002;
+
     private WindowManager wm;
     private View tab;
     private View panel;
@@ -42,6 +46,7 @@ public class FloatingPanelService extends Service {
 
     private boolean expanded = false;
     private boolean editing = false;
+    private boolean busy = false;
 
     private TextView earnings;
     private TextView count;
@@ -101,7 +106,7 @@ public class FloatingPanelService extends Service {
     };
 
     private final int[] cards = {
-        0xFF211735, 0xFFFFFFFF, 0xFF1B1B1B, 0xFF2A151C,
+        0xFF211735, 0xFFE2E8F0, 0xFF1B1B1B, 0xFF2A151C,
         0xFF142D20, 0xFF30280E, 0xFF172849, 0xFF12313A,
         0xFF3A1830, 0xFF3A2113
     };
@@ -155,9 +160,27 @@ public class FloatingPanelService extends Service {
     }
 
     private String money(long value) {
+        if (prefs != null &&
+            prefs.getBoolean("currency_compact", false)) {
+            return compactMoney(value);
+        }
         return NumberFormat.getIntegerInstance(
             new Locale("ru", "RU")
         ).format(value);
+    }
+
+    private String compactMoney(long value) {
+        if (value >= 1000000) {
+            return String.format(
+                Locale.US, "%.1fм", value / 1000000.0
+            );
+        }
+        if (value >= 1000) {
+            return String.format(
+                Locale.US, "%.0fк", value / 1000.0
+            );
+        }
+        return String.valueOf(value);
     }
 
     private boolean canAdd(long first, long second) {
@@ -166,95 +189,170 @@ public class FloatingPanelService extends Service {
             first <= Long.MAX_VALUE - second;
     }
 
-    private void playActionFeedback(boolean undo) {
+    // ---------------- ЗВУКИ И ВИБРАЦИЯ (П.9) ----------------
+
+    private void feedbackAdd() {
+        playTone(ToneGenerator.TONE_PROP_BEEP2, 90);
+        vibrate(25, 0);
+    }
+
+    private void feedbackUndo() {
+        playTone(ToneGenerator.TONE_PROP_NACK, 140);
+        vibrate(50, 60);
+    }
+
+    private void feedbackError() {
+        playTone(ToneGenerator.TONE_PROP_NACK, 220);
+        long[] pattern = { 0, 60, 80, 60 };
+        vibratePattern(pattern);
+    }
+
+    private void playTone(int toneType, int durationMs) {
         if (prefs == null) return;
-
         if (prefs.getBoolean("silent_mode", false)) return;
+        if (!prefs.getBoolean("sound_enabled", true)) return;
 
-        if (prefs.getBoolean("sound_enabled", true)) {
-            int volume = Math.max(
-                0,
-                Math.min(100, prefs.getInt("sound_volume", 70))
+        int volume = Math.max(
+            0, Math.min(100, prefs.getInt("sound_volume", 70))
+        );
+        if (volume <= 0) return;
+
+        ToneGenerator tone = null;
+        try {
+            tone = new ToneGenerator(AudioManager.STREAM_MUSIC, volume);
+            tone.startTone(toneType, durationMs);
+        } catch (Exception ignored) {
+        } finally {
+            if (tone != null) {
+                final ToneGenerator finalTone = tone;
+                mainHandler.postDelayed(() -> {
+                    try { finalTone.release(); } catch (Exception ignored) {}
+                }, durationMs + 50);
+            }
+        }
+    }
+
+    private void vibrate(long ms, long sleepMs) {
+        if (prefs == null) return;
+        if (prefs.getBoolean("silent_mode", false)) return;
+        if (!prefs.getBoolean("vibration_enabled", true)) return;
+
+        try {
+            Vibrator v = (Vibrator)getSystemService(VIBRATOR_SERVICE);
+            if (v == null || !v.hasVibrator()) return;
+
+            if (Build.VERSION.SDK_INT >= 26) {
+                v.vibrate(VibrationEffect.createOneShot(
+                    ms, VibrationEffect.DEFAULT_AMPLITUDE
+                ));
+            } else {
+                v.vibrate(ms);
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void vibratePattern(long[] pattern) {
+        if (prefs == null) return;
+        if (prefs.getBoolean("silent_mode", false)) return;
+        if (!prefs.getBoolean("vibration_enabled", true)) return;
+
+        try {
+            Vibrator v = (Vibrator)getSystemService(VIBRATOR_SERVICE);
+            if (v == null || !v.hasVibrator()) return;
+
+            if (Build.VERSION.SDK_INT >= 26) {
+                v.vibrate(VibrationEffect.createWaveform(pattern, -1));
+            } else {
+                v.vibrate(pattern, -1);
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
+    // ---------------- УВЕДОМЛЕНИЯ (П.8) ----------------
+
+    private void createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= 26) {
+            NotificationChannel ch = new NotificationChannel(
+                NOTIF_CHANNEL,
+                "TruckLog панель",
+                NotificationManager.IMPORTANCE_LOW
             );
+            NotificationManager nm = (NotificationManager)
+                getSystemService(NOTIFICATION_SERVICE);
+            if (nm != null) nm.createNotificationChannel(ch);
+        }
+    }
 
-            if (volume > 0) {
-                ToneGenerator tone = null;
+    private void notifyPanel(int id, String title, String text) {
+        if (prefs == null) return;
+        if (!prefs.getBoolean("notifications_enabled", true)) return;
+
+        try {
+            createNotificationChannel();
+
+            Notification.Builder b;
+            if (Build.VERSION.SDK_INT >= 26) {
+                b = new Notification.Builder(this, NOTIF_CHANNEL);
+            } else {
+                b = new Notification.Builder(this);
+            }
+
+            b.setContentTitle(title)
+                .setContentText(text)
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setAutoCancel(true);
+
+            NotificationManager nm = (NotificationManager)
+                getSystemService(NOTIFICATION_SERVICE);
+            if (nm != null) nm.notify(id, b.build());
+        } catch (Exception ignored) {
+        }
+    }
+
+    // ---------------- ИСТОРИЯ ОТМЕНЫ КРУГОВ ----------------
+
+    private ArrayList<UndoRecord> getUndoStack() {
+        ArrayList<UndoRecord> result = new ArrayList<>();
+
+        String saved = prefs.getString(KEY_UNDO_STACK, "");
+
+        if (saved != null && !saved.trim().isEmpty()) {
+            String[] records = saved.split(";");
+
+            for (String item : records) {
                 try {
-                    tone = new ToneGenerator(
-                        AudioManager.STREAM_MUSIC,
-                        volume
-                    );
-                    tone.startTone(
-                        undo
-                            ? ToneGenerator.TONE_PROP_NACK
-                            : ToneGenerator.TONE_PROP_ACK,
-                        110
-                    );
+                    String[] values = item.split(":");
+                    if (values.length != 2) continue;
+
+                    long id = Long.parseLong(values[0]);
+                    long amount = Long.parseLong(values[1]);
+
+                    if (id > 0 && amount > 0) {
+                        result.add(new UndoRecord(id, amount));
+                    }
                 } catch (Exception ignored) {
-                } finally {
-                    if (tone != null) {
-                        try {
-                            tone.release();
-                        } catch (Exception ignored) {
-                        }
-                    }
                 }
             }
         }
 
-        if (prefs.getBoolean("vibration_enabled", true)) {
-            try {
-                Vibrator vibrator = (Vibrator)getSystemService(
-                    VIBRATOR_SERVICE
-                );
-
-                if (vibrator != null && vibrator.hasVibrator()) {
-                    if (Build.VERSION.SDK_INT >= 26) {
-                        vibrator.vibrate(
-                            VibrationEffect.createOneShot(
-                                35,
-                                VibrationEffect.DEFAULT_AMPLITUDE
-                            )
-                        );
-                    } else {
-                        vibrator.vibrate(35);
-                    }
-                }
-            } catch (Exception ignored) {
-            }
-        }
+        return result;
     }
 
-    private int panelScale() {
-        int value = prefs.getInt("panel_size", 100);
-        return Math.max(70, Math.min(130, value));
-    }
+    private String serializeUndoStack(ArrayList<UndoRecord> stack) {
+        StringBuilder builder = new StringBuilder();
 
-    private int panelOpacity() {
-        int value = prefs.getInt("panel_opacity", 100);
-        return Math.max(30, Math.min(100, value));
-    }
-
-    private int scaledDp(int value) {
-        return dp(value * panelScale() / 100f);
-    }
-
-    private void applyPanelOpacity(View view) {
-        if (view == null || view.getBackground() == null) {
-            return;
+        for (UndoRecord record : stack) {
+            if (builder.length() > 0) builder.append(";");
+            builder.append(record.id).append(":").append(record.amount);
         }
 
-        int alpha = (int) (255f * panelOpacity() / 100f);
-        view.getBackground().setAlpha(alpha);
+        return builder.toString();
     }
 
-    // ---------------- УВЕДОМЛЕНИЯ ВМЕСТО TOAST ----------------
+    // ---------------- УВЕДОМЛЕНИЯ В ПАНЕЛИ ----------------
 
-    /**
-     * Безопасная стилизация AlertDialog.
-     * android.R.id.alertTitle / message / button* — внутренние,
-     * поэтому ищем их по имени через getIdentifier.
-     */
     private void styleDialog(AlertDialog dialog) {
         if (dialog == null) return;
 
@@ -339,56 +437,6 @@ public class FloatingPanelService extends Service {
                 inlineView.setVisibility(View.GONE);
             }
         }, 3000);
-    }
-
-    // ---------------- ИСТОРИЯ ОТМЕНЫ КРУГОВ ----------------
-
-    private ArrayList<UndoRecord> getUndoStack() {
-        ArrayList<UndoRecord> result = new ArrayList<>();
-
-        String saved = prefs.getString(KEY_UNDO_STACK, "");
-
-        if (saved != null && !saved.trim().isEmpty()) {
-            String[] records = saved.split(";");
-
-            for (String item : records) {
-                try {
-                    String[] values = item.split(":");
-                    if (values.length != 2) continue;
-
-                    long id = Long.parseLong(values[0]);
-                    long amount = Long.parseLong(values[1]);
-
-                    if (id > 0 && amount > 0) {
-                        result.add(new UndoRecord(id, amount));
-                    }
-
-                } catch (Exception ignored) {
-                }
-            }
-        }
-
-        if (result.isEmpty()) {
-            long oldId = prefs.getLong(KEY_LAST_PANEL_TRIP, -1);
-            long oldAmount = prefs.getLong(KEY_LAST_PANEL_AMOUNT, 0);
-
-            if (oldId > 0 && oldAmount > 0) {
-                result.add(new UndoRecord(oldId, oldAmount));
-            }
-        }
-
-        return result;
-    }
-
-    private String serializeUndoStack(ArrayList<UndoRecord> stack) {
-        StringBuilder builder = new StringBuilder();
-
-        for (UndoRecord record : stack) {
-            if (builder.length() > 0) builder.append(";");
-            builder.append(record.id).append(":").append(record.amount);
-        }
-
-        return builder.toString();
     }
 
     // ---------------- ЗАПУСК СЕРВИСА ----------------
@@ -694,6 +742,27 @@ public class FloatingPanelService extends Service {
         progressBar = null;
     }
 
+    private int panelScale() {
+        int value = prefs.getInt("panel_size", 100);
+        return Math.max(70, Math.min(130, value));
+    }
+
+    private int panelOpacity() {
+        int value = prefs.getInt("panel_opacity", 100);
+        return Math.max(30, Math.min(100, value));
+    }
+
+    private int scaledDp(int value) {
+        return dp(value * panelScale() / 100f);
+    }
+
+    private void applyPanelOpacity(View view) {
+        if (view == null || view.getBackground() == null) return;
+
+        int alpha = (int) (255f * panelOpacity() / 100f);
+        view.getBackground().setAlpha(alpha);
+    }
+
     // ---------------- СОЗДАНИЕ ПАНЕЛИ ----------------
 
     private void makePanel() {
@@ -898,6 +967,7 @@ public class FloatingPanelService extends Service {
                     refreshStats();
 
                 } catch (Exception e) {
+                    feedbackError();
                     showServiceInline("Введи корректные числа");
                 }
             });
@@ -953,16 +1023,17 @@ public class FloatingPanelService extends Service {
         }
     }
 
-    // ---------------- СБРОС ТЕКУЩЕЙ СМЕНЫ ----------------
+    // ---------------- СБРОС ТЕКУЩЕЙ СМЕНЫ (П.2) ----------------
 
     private void showResetDialog() {
         try {
             AlertDialog dialog = new AlertDialog.Builder(this)
                 .setTitle("Сбросить статистику?")
                 .setMessage(
-                    "Круги текущей смены будут удалены из истории, " +
-                    "а их заработок вычтен из общего баланса. " +
-                    "Предыдущие дни и завершённые смены останутся."
+                    "Круги текущей смены будут удалены из истории " +
+                    "(и ручные, и с панели), а их заработок вычтен " +
+                    "из общего баланса. Предыдущие дни и завершённые " +
+                    "смены останутся."
                 )
                 .setNegativeButton("Отмена", null)
                 .setPositiveButton(
@@ -993,14 +1064,9 @@ public class FloatingPanelService extends Service {
     }
 
     /**
-     * Сбрасывает показатели текущей смены:
-     * - удаляет круги текущей смены (только source=floating_panel) из SQLite;
-     * - вычитает их заработок из общего баланса;
-     * - обнуляет секунды, shiftEarned, shiftTrips, shiftStartedAt;
-     * - останавливает текущий рейс;
-     * - чистит стек отмены.
-     *
-     * Не затрагивает предыдущие дни, ручные рейсы и завершённые смены.
+     * Универсальный сброс текущей смены (П.2):
+     * удаляет все круги смены из SQLite (ручные + панель),
+     * вычитает из баланса и количества кругов.
      */
     public static boolean resetCurrentShift(Context context) {
         if (context == null) return false;
@@ -1009,267 +1075,311 @@ public class FloatingPanelService extends Service {
         SharedPreferences preferences = app.getSharedPreferences(
             "truck_stats", Context.MODE_PRIVATE
         );
-        DataRepository repository = DataRepository.getInstance(app);
+        DataRepository repo = DataRepository.getInstance(app);
 
-        ArrayList<UndoRecord> stack = new ArrayList<>();
+        long shiftStartedAt = preferences.getLong(KEY_SHIFT_STARTED, 0L);
 
-        String saved = preferences.getString(KEY_UNDO_STACK, "");
-
-        if (saved != null && !saved.trim().isEmpty()) {
-            String[] records = saved.split(";");
-
-            for (String item : records) {
-                try {
-                    String[] values = item.split(":");
-                    if (values.length != 2) continue;
-
-                    long id = Long.parseLong(values[0]);
-                    long amount = Long.parseLong(values[1]);
-
-                    if (id > 0 && amount > 0) {
-                        stack.add(new UndoRecord(id, amount));
-                    }
-                } catch (Exception ignored) {
-                }
-            }
+        if (shiftStartedAt <= 0) {
+            shiftStartedAt = System.currentTimeMillis();
         }
 
-        if (stack.isEmpty()) {
-            long oldId = preferences.getLong(KEY_LAST_PANEL_TRIP, -1);
-            long oldAmount = preferences.getLong(KEY_LAST_PANEL_AMOUNT, 0);
-
-            if (oldId > 0 && oldAmount > 0) {
-                stack.add(new UndoRecord(oldId, oldAmount));
-            }
-        }
-
-        long deletedAmount = 0L;
-        long deletedCount = 0L;
-
-        for (UndoRecord record : stack) {
-            if (!canAddStatic(deletedAmount, record.amount) ||
-                deletedCount == Long.MAX_VALUE) {
-                continue;
-            }
-
-            boolean deleted = repository.deleteTrip(
-                record.id,
-                "floating_panel"
-            );
-
-            if (deleted) {
-                deletedAmount += record.amount;
-                deletedCount++;
-            }
-        }
-
-        long balance = Math.max(0L, preferences.getLong("balance", 0L));
-        long trips = Math.max(0L, preferences.getLong("trips", 0L));
-        long shiftEarned = Math.max(
-            0L, preferences.getLong("shiftEarned", 0L)
-        );
-        long shiftTrips = Math.max(
-            0L, preferences.getLong("shiftTrips", 0L)
-        );
-
-        long newBalance = Math.max(
-            0L, balance - Math.min(balance, deletedAmount)
-        );
-        long newTrips = Math.max(
-            0L, trips - Math.min(trips, deletedCount)
-        );
-        long newShiftEarned = Math.max(
-            0L, shiftEarned - Math.min(shiftEarned, deletedAmount)
-        );
-        long newShiftTrips = Math.max(
-            0L, shiftTrips - Math.min(shiftTrips, deletedCount)
-        );
-
-        return preferences.edit()
-            .putLong("balance", newBalance)
-            .putLong("trips", newTrips)
-            .putLong("seconds", 0L)
-            .putLong("shiftEarned", newShiftEarned)
-            .putLong("shiftTrips", newShiftTrips)
-            .putLong(KEY_SHIFT_STARTED, 0L)
-            .putLong("startAt", 0L)
-            .putBoolean("running", false)
-            .remove(KEY_UNDO_STACK)
-            .remove(KEY_LAST_PANEL_TRIP)
-            .remove(KEY_LAST_PANEL_AMOUNT)
-            .commit();
-    }
-
-    private static boolean canAddStatic(long a, long b) {
-        return a >= 0 && b >= 0 && a <= Long.MAX_VALUE - b;
-    }
-
-    private void resetStats() {
         try {
-            boolean saved = resetCurrentShift(this);
+            DatabaseHelper.ResetResult result =
+                repo.resetShift(shiftStartedAt);
 
-            if (!saved) {
-                showServiceDialog(
-                    "Сброс не выполнен",
-                    "Не удалось сохранить изменения статистики. " +
-                    "Проверь данные перед повторным сбросом."
-                );
-                refreshStats();
-                return;
-            }
+            long amount = result != null ? result.amount : 0L;
+            long count = result != null ? result.count : 0L;
 
-            refreshStats();
-            showServiceInline("Текущая смена сброшена. Остальная история сохранена.");
-
-        } catch (Exception e) {
-            showServiceDialog(
-                "Ошибка",
-                "Ошибка сброса статистики."
+            long balance = Math.max(0L, preferences.getLong("balance", 0L));
+            long trips = Math.max(0L, preferences.getLong("trips", 0L));
+            long shiftEarned = Math.max(
+                0L, preferences.getLong("shiftEarned", 0L)
             );
-        }
-    }
-
-    // ---------------- ДОБАВЛЕНИЕ КРУГА ----------------
-
-    private void addRound() {
-        long pay = prefs.getInt("pay", 15000);
-        long balance = prefs.getLong("balance", 0);
-        long trips = prefs.getLong("trips", 0);
-        long earned = prefs.getLong("shiftEarned", 0);
-        long shiftTrips = prefs.getLong("shiftTrips", 0);
-
-        if (pay <= 0 ||
-            !canAdd(balance, pay) ||
-            !canAdd(earned, pay) ||
-            trips < 0 ||
-            trips == Long.MAX_VALUE ||
-            shiftTrips < 0 ||
-            shiftTrips == Long.MAX_VALUE) {
-
-            showServiceInline("Невозможно добавить круг");
-            return;
-        }
-
-        long now = System.currentTimeMillis();
-
-        long recordId = repository.addTrip(
-            pay, now, 0, "", "", "floating_panel"
-        );
-
-        if (recordId <= 0) {
-            showServiceInline("Не удалось сохранить круг");
-            return;
-        }
-
-        long shiftStartedAt = prefs.getLong(KEY_SHIFT_STARTED, 0);
-        if (shiftStartedAt <= 0) shiftStartedAt = now;
-
-        ArrayList<UndoRecord> stack = getUndoStack();
-        stack.add(new UndoRecord(recordId, pay));
-
-        SharedPreferences.Editor editor = prefs.edit();
-
-        editor.putString(KEY_UNDO_STACK, serializeUndoStack(stack));
-        editor.remove(KEY_LAST_PANEL_TRIP);
-        editor.remove(KEY_LAST_PANEL_AMOUNT);
-
-        editor.putLong("balance", balance + pay);
-        editor.putLong("trips", trips + 1);
-        editor.putLong("shiftEarned", earned + pay);
-        editor.putLong("shiftTrips", shiftTrips + 1);
-        editor.putLong(KEY_SHIFT_STARTED, shiftStartedAt);
-
-        if (!editor.commit()) {
-            repository.deleteTrip(recordId, "floating_panel");
-            showServiceInline("Не удалось сохранить круг. Попробуй ещё раз.");
-            return;
-        }
-
-        playActionFeedback(false);
-        refreshStats();
-    }
-
-    // ---------------- ОТМЕНА КРУГА ----------------
-
-    private void undoRound() {
-        ArrayList<UndoRecord> stack = getUndoStack();
-
-        if (stack.isEmpty()) {
-            refreshStats();
-            return;
-        }
-
-        UndoRecord record = stack.get(stack.size() - 1);
-
-        long balance = prefs.getLong("balance", 0);
-        long trips = prefs.getLong("trips", 0);
-        long earned = prefs.getLong("shiftEarned", 0);
-        long shiftTrips = prefs.getLong("shiftTrips", 0);
-
-        if (record.amount <= 0 ||
-            balance < record.amount ||
-            trips <= 0 ||
-            earned < record.amount ||
-            shiftTrips <= 0) {
-
-            showServiceInline(
-                "Не удалось безопасно отменить круг. Статистика не изменена."
+            long shiftTrips = Math.max(
+                0L, preferences.getLong("shiftTrips", 0L)
             );
-            return;
-        }
 
-        boolean deleted = repository.deleteTrip(
-            record.id,
-            "floating_panel"
-        );
-
-        if (!deleted) {
-            showServiceInline(
-                "Запись круга не найдена. Статистика не изменена."
+            long newBalance = Math.max(
+                0L, balance - Math.min(balance, amount)
             );
-            return;
-        }
+            long newTrips = Math.max(
+                0L, trips - Math.min(trips, count)
+            );
+            long newShiftEarned = Math.max(
+                0L, shiftEarned - Math.min(shiftEarned, amount)
+            );
+            long newShiftTrips = Math.max(
+                0L, shiftTrips - Math.min(shiftTrips, count)
+            );
 
-        stack.remove(stack.size() - 1);
-
-        long newBalance = balance - record.amount;
-        long newTrips = trips - 1;
-        long newEarned = earned - record.amount;
-        long newShiftTrips = shiftTrips - 1;
-
-        SharedPreferences.Editor editor = prefs.edit();
-
-        editor.putLong("balance", newBalance);
-        editor.putLong("trips", newTrips);
-        editor.putLong("shiftEarned", newEarned);
-        editor.putLong("shiftTrips", newShiftTrips);
-
-        editor.putString(KEY_UNDO_STACK, serializeUndoStack(stack));
-        editor.remove(KEY_LAST_PANEL_TRIP);
-        editor.remove(KEY_LAST_PANEL_AMOUNT);
-
-        if (newEarned == 0 && newShiftTrips == 0) {
-            editor.putLong(KEY_SHIFT_STARTED, 0);
-        }
-
-        boolean saved = editor.commit();
-
-        if (!saved) {
-            prefs.edit()
-                .putString(KEY_UNDO_STACK, serializeUndoStack(stack))
+            return preferences.edit()
+                .putLong("balance", newBalance)
+                .putLong("trips", newTrips)
+                .putLong("seconds", 0L)
+                .putLong("shiftEarned", newShiftEarned)
+                .putLong("shiftTrips", newShiftTrips)
+                .putLong(KEY_SHIFT_STARTED, 0L)
+                .putLong("startAt", 0L)
+                .putBoolean("running", false)
+                .remove(KEY_UNDO_STACK)
                 .remove(KEY_LAST_PANEL_TRIP)
                 .remove(KEY_LAST_PANEL_AMOUNT)
                 .commit();
 
-            showServiceInline(
-                "Запись удалена, но счётчики не удалось сохранить. " +
-                "Проверь статистику в приложении."
-            );
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private void resetStats() {
+        busy = true;
+        if (resetButton != null) resetButton.setEnabled(false);
+
+        new Thread(() -> {
+            boolean saved = false;
+            try {
+                saved = resetCurrentShift(this);
+            } catch (Exception ignored) {
+            }
+
+            final boolean ok = saved;
+
+            mainHandler.post(() -> {
+                busy = false;
+                if (resetButton != null) resetButton.setEnabled(true);
+
+                if (!ok) {
+                    feedbackError();
+                    showServiceDialog(
+                        "Сброс не выполнен",
+                        "Не удалось сохранить изменения статистики. " +
+                        "Проверь данные перед повторным сбросом."
+                    );
+                    refreshStats();
+                    return;
+                }
+
+                feedbackUndo();
+                refreshStats();
+                showServiceInline(
+                    "Смена сброшена. Баланс и история обновлены."
+                );
+            });
+        }).start();
+    }
+
+    // ---------------- ДОБАВЛЕНИЕ КРУГА (П.1) ----------------
+
+    private void addRound() {
+        if (busy) return;
+        busy = true;
+
+        if (round != null) round.setEnabled(false);
+        if (undoButton != null) undoButton.setEnabled(false);
+
+        new Thread(() -> {
+            boolean ok = false;
+            String error = null;
+            long pay = 0;
+
+            try {
+                pay = prefs.getInt("pay", 15000);
+                long balance = prefs.getLong("balance", 0);
+                long trips = prefs.getLong("trips", 0);
+                long earned = prefs.getLong("shiftEarned", 0);
+                long shiftTrips = prefs.getLong("shiftTrips", 0);
+
+                if (pay <= 0 ||
+                    !canAdd(balance, pay) ||
+                    !canAdd(earned, pay) ||
+                    trips < 0 ||
+                    trips == Long.MAX_VALUE ||
+                    shiftTrips < 0 ||
+                    shiftTrips == Long.MAX_VALUE) {
+
+                    error = "Невозможно добавить круг";
+                } else {
+                    long now = System.currentTimeMillis();
+
+                    long recordId = repository.addTrip(
+                        pay, now, 0, "", "", "floating_panel"
+                    );
+
+                    if (recordId <= 0) {
+                        error = "Не удалось сохранить круг";
+                    } else {
+                        long shiftStartedAt =
+                            prefs.getLong(KEY_SHIFT_STARTED, 0);
+                        if (shiftStartedAt <= 0) shiftStartedAt = now;
+
+                        ArrayList<UndoRecord> stack = getUndoStack();
+                        stack.add(new UndoRecord(recordId, pay));
+
+                        SharedPreferences.Editor editor = prefs.edit();
+                        editor.putString(
+                            KEY_UNDO_STACK, serializeUndoStack(stack)
+                        );
+                        editor.putLong("balance", balance + pay);
+                        editor.putLong("trips", trips + 1);
+                        editor.putLong("shiftEarned", earned + pay);
+                        editor.putLong("shiftTrips", shiftTrips + 1);
+                        editor.putLong(KEY_SHIFT_STARTED, shiftStartedAt);
+
+                        if (editor.commit()) {
+                            ok = true;
+                        } else {
+                            repository.deleteTrip(
+                                recordId, "floating_panel"
+                            );
+                            error = "Не удалось сохранить круг. Попробуй ещё раз.";
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                error = "Ошибка при сохранении круга";
+            }
+
+            final boolean success = ok;
+            final String errMsg = error;
+            final long finalPay = pay;
+
+            mainHandler.post(() -> {
+                busy = false;
+                if (round != null) round.setEnabled(true);
+
+                if (success) {
+                    feedbackAdd();
+                    refreshStats();
+
+                    if (prefs.getBoolean(
+                            "trip_finish_notifications", true)) {
+                        notifyPanel(
+                            NOTIF_ROUND,
+                            "Круг добавлен",
+                            "+" + money(finalPay) + " ₽"
+                        );
+                    }
+                } else {
+                    feedbackError();
+                    if (errMsg != null) showServiceInline(errMsg);
+                }
+            });
+        }).start();
+    }
+
+    // ---------------- ОТМЕНА КРУГА (П.1) ----------------
+
+    private void undoRound() {
+        if (busy) return;
+
+        ArrayList<UndoRecord> stack = getUndoStack();
+        if (stack.isEmpty()) {
+            refreshStats();
             return;
         }
 
-        playActionFeedback(true);
-        refreshStats();
+        busy = true;
+        if (undoButton != null) undoButton.setEnabled(false);
+        if (round != null) round.setEnabled(false);
+
+        new Thread(() -> {
+            boolean ok = false;
+            String error = null;
+            long amount = 0;
+
+            try {
+                ArrayList<UndoRecord> current = getUndoStack();
+                if (current.isEmpty()) {
+                    error = null;
+                } else {
+                    UndoRecord record = current.get(current.size() - 1);
+                    amount = record.amount;
+
+                    long balance = prefs.getLong("balance", 0);
+                    long trips = prefs.getLong("trips", 0);
+                    long earned = prefs.getLong("shiftEarned", 0);
+                    long shiftTrips = prefs.getLong("shiftTrips", 0);
+
+                    if (record.amount <= 0 ||
+                        balance < record.amount ||
+                        trips <= 0 ||
+                        earned < record.amount ||
+                        shiftTrips <= 0) {
+
+                        error = "Не удалось безопасно отменить круг";
+                    } else {
+                        boolean deleted = repository.deleteTrip(
+                            record.id, "floating_panel"
+                        );
+
+                        if (!deleted) {
+                            error = "Запись круга не найдена";
+                        } else {
+                            current.remove(current.size() - 1);
+
+                            long newBalance = balance - record.amount;
+                            long newTrips = trips - 1;
+                            long newEarned = earned - record.amount;
+                            long newShiftTrips = shiftTrips - 1;
+
+                            SharedPreferences.Editor editor =
+                                prefs.edit();
+                            editor.putLong("balance", newBalance);
+                            editor.putLong("trips", newTrips);
+                            editor.putLong("shiftEarned", newEarned);
+                            editor.putLong("shiftTrips", newShiftTrips);
+                            editor.putString(
+                                KEY_UNDO_STACK,
+                                serializeUndoStack(current)
+                            );
+
+                            if (newEarned == 0 && newShiftTrips == 0) {
+                                editor.putLong(KEY_SHIFT_STARTED, 0);
+                            }
+
+                            if (editor.commit()) {
+                                ok = true;
+                            } else {
+                                // Откатываем состояние стека,
+                                // запись уже удалена — повторно не восстановить.
+                                error = "Запись удалена, но счётчики " +
+                                        "не удалось сохранить";
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                error = "Ошибка при отмене круга";
+            }
+
+            final boolean success = ok;
+            final String errMsg = error;
+
+            mainHandler.post(() -> {
+                busy = false;
+                if (round != null) round.setEnabled(true);
+
+                if (success) {
+                    feedbackUndo();
+                    refreshStats();
+
+                    if (prefs.getBoolean(
+                            "trip_finish_notifications", true)) {
+                        notifyPanel(
+                            NOTIF_UNDO,
+                            "Круг отменён",
+                            "-" + money(amount) + " ₽"
+                        );
+                    }
+                } else {
+                    if (errMsg != null) {
+                        feedbackError();
+                        showServiceInline(errMsg);
+                    }
+                    refreshStats();
+                }
+            });
+        }).start();
     }
 
     // ---------------- ОБНОВЛЕНИЕ СТАТИСТИКИ ----------------
@@ -1319,12 +1429,12 @@ public class FloatingPanelService extends Service {
 
         if (undoButton != null) {
             boolean has = !getUndoStack().isEmpty();
-            undoButton.setEnabled(has);
+            undoButton.setEnabled(has && !busy);
             undoButton.setAlpha(has ? 1f : 0.5f);
         }
     }
 
-    // ---------------- СМЕНА ТЕМЫ ----------------
+    // ---------------- СМЕНА ТЕМЫ (П.10) ----------------
 
     private void refreshTheme() {
         int currentAccent = accent();
@@ -1341,21 +1451,10 @@ public class FloatingPanelService extends Service {
             applyPanelOpacity(panel);
         }
 
-        if (panelTitle != null) {
-            panelTitle.setTextColor(currentForeground);
-        }
-
-        if (earnings != null) {
-            earnings.setTextColor(currentAccent);
-        }
-
-        if (count != null) {
-            count.setTextColor(currentForeground);
-        }
-
-        if (progressText != null) {
-            progressText.setTextColor(currentAccent);
-        }
+        if (panelTitle != null) panelTitle.setTextColor(currentForeground);
+        if (earnings != null) earnings.setTextColor(currentAccent);
+        if (count != null) count.setTextColor(currentForeground);
+        if (progressText != null) progressText.setTextColor(currentAccent);
 
         if (progressBar != null) {
             progressBar.setProgressTintList(
@@ -1403,17 +1502,9 @@ public class FloatingPanelService extends Service {
             dragButton.setTextColor(currentForeground);
         }
 
-        if (payInput != null) {
-            payInput.setTextColor(currentForeground);
-        }
-
-        if (goalInput != null) {
-            goalInput.setTextColor(currentForeground);
-        }
-
-        if (inlineView != null) {
-            inlineView.setTextColor(currentAccent);
-        }
+        if (payInput != null) payInput.setTextColor(currentForeground);
+        if (goalInput != null) goalInput.setTextColor(currentForeground);
+        if (inlineView != null) inlineView.setTextColor(currentAccent);
 
         if (settingsBox != null) {
             for (int i = 0; i < settingsBox.getChildCount(); i++) {
@@ -1455,8 +1546,7 @@ public class FloatingPanelService extends Service {
 
             if (imm != null && payInput != null) {
                 imm.hideSoftInputFromWindow(
-                    payInput.getWindowToken(),
-                    0
+                    payInput.getWindowToken(), 0
                 );
             }
         } catch (Exception ignored) {
@@ -1507,4 +1597,4 @@ public class FloatingPanelService extends Service {
     public IBinder onBind(Intent intent) {
         return null;
     }
-}
+            }
