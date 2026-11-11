@@ -189,6 +189,22 @@ public class FloatingPanelService extends Service {
             first <= Long.MAX_VALUE - second;
     }
 
+    /**
+     * Смена считается начатой, если:
+     * - идёт рейс (running), ИЛИ
+     * - shiftStartedAt > 0, ИЛИ
+     * - уже есть круги/заработок в текущей смене.
+     */
+    private boolean isShiftStarted() {
+        if (prefs == null) return false;
+
+        if (prefs.getBoolean("running", false)) return true;
+        if (prefs.getLong(KEY_SHIFT_STARTED, 0L) > 0L) return true;
+        if (prefs.getLong("shiftTrips", 0L) > 0L) return true;
+        if (prefs.getLong("shiftEarned", 0L) > 0L) return true;
+        return false;
+    }
+
     // ---------------- ЗВУКИ И ВИБРАЦИЯ ----------------
 
     private void feedbackAdd() {
@@ -1063,21 +1079,6 @@ public class FloatingPanelService extends Service {
         }
     }
 
-    /**
-     * Простой сброс текущих показателей (П.2):
-     * - balance = 0
-     * - trips = 0
-     * - shiftEarned = 0
-     * - shiftTrips = 0
-     * - seconds = 0
-     * - shiftStartedAt = 0
-     * - startAt = 0
-     * - running = false
-     * - panel_undo_stack очищается
-     *
-     * История рейсов в SQLite НЕ трогается —
-     * графики и общая статистика остаются.
-     */
     public static boolean resetCurrentShift(Context context) {
         if (context == null) return false;
 
@@ -1145,6 +1146,13 @@ public class FloatingPanelService extends Service {
     // ---------------- ДОБАВЛЕНИЕ КРУГА ----------------
 
     private void addRound() {
+        // Круг нельзя добавить, если смена не начата
+        if (!isShiftStarted()) {
+            feedbackError();
+            showServiceInline("Сначала начни смену в приложении (Начать рейс)");
+            return;
+        }
+
         if (busy) return;
         busy = true;
 
@@ -1219,7 +1227,7 @@ public class FloatingPanelService extends Service {
 
             mainHandler.post(() -> {
                 busy = false;
-                if (round != null) round.setEnabled(true);
+                if (round != null) round.setEnabled(isShiftStarted());
 
                 if (success) {
                     feedbackAdd();
@@ -1330,7 +1338,7 @@ public class FloatingPanelService extends Service {
 
             mainHandler.post(() -> {
                 busy = false;
-                if (round != null) round.setEnabled(true);
+                if (round != null) round.setEnabled(isShiftStarted());
 
                 if (success) {
                     feedbackUndo();
@@ -1379,8 +1387,16 @@ public class FloatingPanelService extends Service {
             );
         }
 
+        boolean started = isShiftStarted();
+
         if (round != null) {
-            round.setText("СДЕЛАЛ КРУГ  +" + money(pay) + " ₽");
+            round.setText(
+                started
+                    ? "СДЕЛАЛ КРУГ  +" + money(pay) + " ₽"
+                    : "СНАЧАЛА НАЧНИ СМЕНУ"
+            );
+            round.setEnabled(started && !busy);
+            round.setAlpha(started ? 1f : 0.5f);
         }
 
         if (progressText != null && progressBar != null) {
@@ -1570,4 +1586,4 @@ public class FloatingPanelService extends Service {
     public IBinder onBind(Intent intent) {
         return null;
     }
-                        }
+                }
