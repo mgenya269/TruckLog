@@ -2,7 +2,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.matreshka.truckhelper">
 
-    <!-- Разрешения -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -16,7 +15,6 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
-        <!-- Главная активити -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -27,7 +25,6 @@
             </intent-filter>
         </activity>
 
-        <!-- Плавающая панель -->
         <service
             android:name=".FloatingPanelService"
             android:exported="false"
