@@ -39,6 +39,23 @@
     <string name="shift_finished_title">Смена завершена!</string>
     <string name="shift_finished_msg">Заработок: %1$s ₽\nКругов: %2$d\nВремя: %3$s</string>
 
+    <string name="sun">Sun</string>
+<string name="mon">Mon</string>
+<string name="tue">Tue</string>
+<string name="wed">Wed</string>
+<string name="thu">Thu</string>
+<string name="fri">Fri</string>
+<string name="sat">Sat</string>
+<string name="theme_neon">Neon</string>
+<string name="theme_indigo">Indigo</string>
+<string name="theme_cyan">Cyan</string>
+<string name="theme_red">Red</string>
+<string name="theme_green">Green</string>
+<string name="theme_gold">Gold</string>
+<string name="theme_blue">Blue</string>
+<string name="theme_teal">Teal</string>
+<string name="theme_pink">Pink</string>
+<string name="theme_orange">Orange</string>
     <!-- Статистика -->
     <string name="stats_title">Статистика</string>
     <string name="stats_subtitle">Результаты и личные рекорды</string>
