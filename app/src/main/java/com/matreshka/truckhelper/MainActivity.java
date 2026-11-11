@@ -48,12 +48,11 @@ public class MainActivity extends Activity {
     private static final int NOTIF_SHIFT = 1002;
 
     private final String[] blockKeys = {
-        "balance", "rounds", "payout", "timer", "overlay"
+        "rounds", "payout", "timer"
     };
 
     private final String[] blockNames = {
-        "Баланс и цель", "Количество кругов",
-        "Выплата за круг", "Таймер рейса", "Плавающая панель"
+        "Количество кругов", "Выплата за круг", "Таймер рейса"
     };
 
     private final int[] accents = {
@@ -211,6 +210,11 @@ public class MainActivity extends Activity {
         return false;
     }
 
+    private String formatDateTime(long timestamp) {
+        if (timestamp <= 0) return "—";
+        return new SimpleDateFormat("dd.MM.yyyy  HH:mm", Locale.getDefault()).format(new Date(timestamp));
+    }
+
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= 26) {
             NotificationChannel channel = new NotificationChannel(
@@ -248,7 +252,6 @@ public class MainActivity extends Activity {
     public void onCreate(Bundle state) {
         super.onCreate(state);
 
-        // Разрешаем рисовать под статус-баром и навигационной панелью
         if (Build.VERSION.SDK_INT >= 21) {
             Window window = getWindow();
             window.getDecorView().setSystemUiVisibility(
@@ -318,7 +321,6 @@ public class MainActivity extends Activity {
         scroll.addView(content);
         root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
 
-        // Нижняя навигация — wrap_content + minHeight
         bottomNav = new LinearLayout(this);
         bottomNav.setOrientation(0);
         bottomNav.setBackground(shape(cardColor(), 0));
@@ -334,7 +336,6 @@ public class MainActivity extends Activity {
 
         root.addView(bottomNav, new LinearLayout.LayoutParams(-1, -2));
 
-        // Insets: поднимаем шапку и bottomNav над системными панелями
         final LinearLayout headerRef = header;
         final LinearLayout navRef = bottomNav;
         root.setOnApplyWindowInsetsListener((v, insets) -> {
@@ -347,16 +348,13 @@ public class MainActivity extends Activity {
                 top = 0;
                 bottom = 0;
             }
-
             headerRef.setPadding(dp(20), dp(18) + top, dp(20), dp(10));
-
             ViewGroup.LayoutParams rawLp = navRef.getLayoutParams();
             if (rawLp instanceof LinearLayout.LayoutParams) {
                 LinearLayout.LayoutParams navLp = (LinearLayout.LayoutParams) rawLp;
                 navLp.bottomMargin = bottom;
                 navRef.setLayoutParams(navLp);
             }
-
             return insets;
         });
 
@@ -538,17 +536,15 @@ public class MainActivity extends Activity {
         content.addView(resetStats, rp);
         resetStats.setOnClickListener(v -> showHomeResetDialog());
 
-        if (blockVisible("overlay")) {
-            Button overlay = button(
-                prefs.getBoolean("panel_enabled", false) ? "ПАНЕЛЬ ВКЛЮЧЕНА" : "ВКЛЮЧИТЬ ПАНЕЛЬ",
-                cardColor()
-            );
-            overlay.setBackground(outline(cardColor(), 14, accent()));
-            LinearLayout.LayoutParams op = new LinearLayout.LayoutParams(-1, dp(48));
-            op.topMargin = dp(8);
-            content.addView(overlay, op);
-            overlay.setOnClickListener(v -> toggleOverlay());
-        }
+        Button overlay = button(
+            prefs.getBoolean("panel_enabled", false) ? "ПАНЕЛЬ ВКЛЮЧЕНА" : "ВКЛЮЧИТЬ ПАНЕЛЬ",
+            cardColor()
+        );
+        overlay.setBackground(outline(cardColor(), 14, accent()));
+        LinearLayout.LayoutParams op = new LinearLayout.LayoutParams(-1, dp(48));
+        op.topMargin = dp(8);
+        content.addView(overlay, op);
+        overlay.setOnClickListener(v -> toggleOverlay());
 
         LinearLayout chartCard = card();
         chartCard.addView(text("ГРАФИК ЗАРАБОТКА — 7 ДНЕЙ", 12, muted(), true));
@@ -670,6 +666,7 @@ public class MainActivity extends Activity {
                 .putLong("shiftEarned", 0).putLong("shiftTrips", 0)
                 .putLong("seconds", 0).putLong("shiftStartedAt", 0)
                 .putBoolean("running", false).putLong("startAt", 0)
+                .putLong("last_shift_finished_at", finishTime)
                 .remove("panel_undo_stack")
                 .remove("panel_last_trip_id")
                 .remove("panel_last_trip_amount")
@@ -709,6 +706,8 @@ public class MainActivity extends Activity {
         long shiftTrips = read("shiftTrips");
         if (shiftStartedAt <= 0 && shiftEarned == 0 && shiftTrips == 0) {
             editor.putLong("shiftStartedAt", startAt);
+            editor.putLong("last_shift_started_at", startAt);
+            editor.remove("last_shift_finished_at");
         }
         editor.apply();
         renderPage();
@@ -767,7 +766,7 @@ public class MainActivity extends Activity {
         trips++;
         seconds += elapsed;
 
-        prefs.edit()
+        SharedPreferences.Editor ed = prefs.edit()
             .putLong("balance", balance)
             .putLong("trips", trips)
             .putLong("seconds", seconds)
@@ -775,8 +774,12 @@ public class MainActivity extends Activity {
             .putLong("shiftTrips", shiftTrips + 1)
             .putLong("shiftStartedAt", shiftStartedAt)
             .putBoolean("running", false)
-            .putLong("startAt", 0)
-            .apply();
+            .putLong("startAt", 0);
+
+        if (prefs.getLong("last_shift_started_at", 0) <= 0) {
+            ed.putLong("last_shift_started_at", shiftStartedAt);
+        }
+        ed.apply();
 
         running = false;
         startAt = 0;
@@ -1048,9 +1051,22 @@ public class MainActivity extends Activity {
         showThemedDialog(dialog);
     }
 
-    private void showHistory() {
-        heading("История", "Круги и разбивка по дням");
+    // ---------------- ИСТОРИЯ С ЖУРНАЛОМ СМЕНЫ ----------------
 
+    private void showHistory() {
+        heading("История", "Смена, круги и время");
+
+        long startedAt = prefs.getLong("last_shift_started_at", 0);
+        long finishedAt = prefs.getLong("last_shift_finished_at", 0);
+
+        // Смена начата
+        if (startedAt > 0) {
+            LinearLayout startCard = card();
+            startCard.addView(text("Смена начата", 16, accent(), true));
+            startCard.addView(text(formatDateTime(startedAt), 14, fg(), false));
+        }
+
+        // Круги + карточка по дням
         Cursor cursor = null;
         HashMap<String, Long> byDayCount = new HashMap<>();
         HashMap<String, Long> byDayAmount = new HashMap<>();
@@ -1090,40 +1106,51 @@ public class MainActivity extends Activity {
             summary.addView(openDays, new LinearLayout.LayoutParams(-1, dp(48)));
             openDays.setOnClickListener(v -> showDaysBreakdown(dayCounts, dayAmounts));
 
-            if (cursor == null || cursor.getCount() == 0) {
+            if (cursor != null && cursor.getCount() > 0) {
+                int amountColumn = cursor.getColumnIndexOrThrow("amount");
+                int timeColumn = cursor.getColumnIndexOrThrow("created_at");
+                int durationColumn = cursor.getColumnIndexOrThrow("duration");
+                int routeColumn = cursor.getColumnIndexOrThrow("route");
+                int noteColumn = cursor.getColumnIndexOrThrow("note");
+
+                SimpleDateFormat fmt = new SimpleDateFormat("dd.MM.yyyy  HH:mm", Locale.getDefault());
+                int number = cursor.getCount();
+
+                while (cursor.moveToNext()) {
+                    long amount = cursor.getLong(amountColumn);
+                    long time = cursor.getLong(timeColumn);
+                    long duration = cursor.getLong(durationColumn);
+                    String route = cursor.getString(routeColumn);
+                    String note = cursor.getString(noteColumn);
+
+                    LinearLayout c = card();
+                    c.addView(text("Круг", 16, accent(), true));
+                    c.addView(text("Время", 11, muted(), true));
+                    c.addView(text(time > 0 ? fmt.format(new Date(time)) : "—", 14, fg(), false));
+                    c.addView(text("+" + money(amount) + " ₽", 20, accent(), true));
+                    if (duration > 0) c.addView(text("Длительность: " + formatTime(duration), 12, muted(), false));
+                    if (route != null && !route.isEmpty()) c.addView(text("Маршрут: " + route, 12, fg(), false));
+                    if (note != null && !note.isEmpty()) c.addView(text("Заметка: " + note, 12, muted(), false));
+                    number--;
+                }
+            } else {
                 card().addView(text("Пока нет записей. Добавь первый круг!", 14, muted(), false));
-                return;
-            }
-
-            int amountColumn = cursor.getColumnIndexOrThrow("amount");
-            int timeColumn = cursor.getColumnIndexOrThrow("created_at");
-            int durationColumn = cursor.getColumnIndexOrThrow("duration");
-            int routeColumn = cursor.getColumnIndexOrThrow("route");
-            int noteColumn = cursor.getColumnIndexOrThrow("note");
-
-            SimpleDateFormat fmt = new SimpleDateFormat("dd.MM.yyyy  HH:mm", Locale.getDefault());
-            int number = cursor.getCount();
-
-            while (cursor.moveToNext()) {
-                long amount = cursor.getLong(amountColumn);
-                long time = cursor.getLong(timeColumn);
-                long duration = cursor.getLong(durationColumn);
-                String route = cursor.getString(routeColumn);
-                String note = cursor.getString(noteColumn);
-
-                LinearLayout c = card();
-                c.addView(text("Запись №" + number, 11, muted(), true));
-                c.addView(text("+" + money(amount) + " ₽", 22, accent(), true));
-                c.addView(text(time > 0 ? fmt.format(new Date(time)) : "Время неизвестно", 12, fg(), false));
-                if (duration > 0) c.addView(text("Длительность: " + formatTime(duration), 12, muted(), false));
-                if (route != null && !route.isEmpty()) c.addView(text("Маршрут: " + route, 12, fg(), false));
-                if (note != null && !note.isEmpty()) c.addView(text("Заметка: " + note, 12, muted(), false));
-                number--;
             }
         } catch (Exception e) {
             card().addView(text("Не удалось загрузить историю", 14, muted(), false));
         } finally {
             if (cursor != null) cursor.close();
+        }
+
+        // Закончил смену
+        if (finishedAt > 0) {
+            LinearLayout endCard = card();
+            endCard.addView(text("Закончил смену", 16, 0xFFEF9A9A, true));
+            endCard.addView(text(formatDateTime(finishedAt), 14, fg(), false));
+        } else if (startedAt > 0) {
+            LinearLayout endCard = card();
+            endCard.addView(text("Смена идёт", 16, accent(), true));
+            endCard.addView(text("Ещё не завершена", 13, muted(), false));
         }
     }
 
@@ -1443,9 +1470,6 @@ public class MainActivity extends Activity {
 
         LinearLayout quick = card();
         quick.addView(text("ПЕРЕЙТИ", 12, muted(), true));
-        Button toCharts = button("▤  Графики заработка", cardColor());
-        quick.addView(toCharts, new LinearLayout.LayoutParams(-1, dp(46)));
-        toCharts.setOnClickListener(v -> { page = "charts"; rebuildBottomNav(); renderPage(); });
         Button toThemes = button("🎨  Оформление", cardColor());
         quick.addView(toThemes, new LinearLayout.LayoutParams(-1, dp(46)));
         toThemes.setOnClickListener(v -> { page = "theme"; rebuildBottomNav(); renderPage(); });
@@ -1709,4 +1733,4 @@ public class MainActivity extends Activity {
         }
         super.onDestroy();
     }
-    }
+                          }
