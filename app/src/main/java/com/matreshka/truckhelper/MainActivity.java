@@ -12,6 +12,9 @@ import android.provider.Settings;
 import android.view.*;
 import android.widget.*;
 import android.text.InputType;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -39,6 +42,10 @@ public class MainActivity extends Activity {
 
     private Handler handler = new Handler();
 
+    private static final String CHANNEL_ID = "trucklog_main";
+    private static final int NOTIF_TRIP = 1001;
+    private static final int NOTIF_SHIFT = 1002;
+
     private final String[] blockKeys = {
         "balance", "rounds", "payout", "timer", "overlay"
     };
@@ -61,7 +68,7 @@ public class MainActivity extends Activity {
     };
 
     private final int[] cards = {
-        0xFF211735, 0xFFFFFFFF, 0xFF1B1B1B, 0xFF2A151C,
+        0xFF211735, 0xFFE2E8F0, 0xFF1B1B1B, 0xFF2A151C,
         0xFF142D20, 0xFF30280E, 0xFF172849, 0xFF12313A,
         0xFF3A1830, 0xFF3A2113
     };
@@ -150,11 +157,6 @@ public class MainActivity extends Activity {
         return e;
     }
 
-    /**
-     * Безопасная стилизация AlertDialog.
-     * android.R.id.alertTitle / message / button* — внутренние,
-     * поэтому ищем их по имени через getIdentifier.
-     */
     private void showThemedDialog(AlertDialog dialog) {
         if (dialog == null) return;
 
@@ -234,6 +236,56 @@ public class MainActivity extends Activity {
         calendar.set(Calendar.SECOND, 0);
         calendar.set(Calendar.MILLISECOND, 0);
         return calendar.getTimeInMillis();
+    }
+
+    // ---------------- УВЕДОМЛЕНИЯ (реально работающие) ----------------
+
+    private void createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= 26) {
+            NotificationChannel channel = new NotificationChannel(
+                CHANNEL_ID,
+                "TruckLog",
+                NotificationManager.IMPORTANCE_DEFAULT
+            );
+            channel.setDescription("Уведомления TruckLog");
+            NotificationManager nm = (NotificationManager)
+                getSystemService(NOTIFICATION_SERVICE);
+            if (nm != null) nm.createNotificationChannel(channel);
+        }
+    }
+
+    private void notifyUser(int id, String title, String text) {
+        if (!prefs.getBoolean("notifications_enabled", true)) return;
+
+        try {
+            createNotificationChannel();
+
+            Intent intent = new Intent(this, MainActivity.class);
+            PendingIntent pi = PendingIntent.getActivity(
+                this, id, intent,
+                Build.VERSION.SDK_INT >= 23
+                    ? PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT
+                    : PendingIntent.FLAG_UPDATE_CURRENT
+            );
+
+            Notification.Builder builder;
+            if (Build.VERSION.SDK_INT >= 26) {
+                builder = new Notification.Builder(this, CHANNEL_ID);
+            } else {
+                builder = new Notification.Builder(this);
+            }
+
+            builder.setContentTitle(title)
+                .setContentText(text)
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setAutoCancel(true)
+                .setContentIntent(pi);
+
+            NotificationManager nm = (NotificationManager)
+                getSystemService(NOTIFICATION_SERVICE);
+            if (nm != null) nm.notify(id, builder.build());
+        } catch (Exception ignored) {
+        }
     }
 
     @Override
@@ -351,7 +403,7 @@ public class MainActivity extends Activity {
         addDrawerItem("▤", "Графики заработка", "charts");
         addDrawerItem("◷", "История кругов", "history");
         addDrawerItem("◎", "Калькулятор целей", "calculator");
-        addDrawerItem("🎨", "Оформление", "theme");
+        // П.6 — «Оформление» убрано из меню, оно есть в настройках
         addDrawerItem("⚙", "Настройки", "settings");
 
         View space = new View(this);
@@ -511,18 +563,7 @@ public class MainActivity extends Activity {
         start.setEnabled(!running);
         start.setOnClickListener(v -> startTrip());
 
-        Button finish = button(
-            "ЗАВЕРШИТЬ РЕЙС  +" + money(pay()) + " ₽",
-            cardColor()
-        );
-
-        LinearLayout.LayoutParams p2 =
-            new LinearLayout.LayoutParams(-1, dp(52));
-        p2.topMargin = dp(8);
-        content.addView(finish, p2);
-
-        finish.setEnabled(running);
-        finish.setOnClickListener(v -> finishTrip());
+        // П.3 — кнопка «ЗАВЕРШИТЬ РЕЙС +15000» убрана
 
         Button finishShift = button(
             running ? "СНАЧАЛА ЗАВЕРШИ ТЕКУЩИЙ РЕЙС"
@@ -575,11 +616,11 @@ public class MainActivity extends Activity {
             )
             .setNegativeButton("Отмена", null)
             .setPositiveButton("Сбросить", (d, which) -> {
-                boolean saved = FloatingPanelService.resetCurrentShift(this);
+                boolean saved = resetShiftNow();
                 if (saved) {
                     syncData();
                     renderPage();
-                    showInline("Показатели смены сброшены. Баланс и история сохранены.");
+                    showInline("Смена сброшена. Баланс и история обновлены.");
                 } else {
                     infoDialog(
                         "Сброс не выполнен",
@@ -590,6 +631,64 @@ public class MainActivity extends Activity {
             .create();
 
         showThemedDialog(dialog);
+    }
+
+    /**
+     * Универсальный сброс текущей смены:
+     * - удаляет все круги смены из SQLite (ручные + панель);
+     * - вычитает их заработок из общего баланса;
+     * - обнуляет секунды, shiftEarned, shiftTrips, shiftStartedAt, running.
+     */
+    private boolean resetShiftNow() {
+        long shiftStartedAt = prefs.getLong("shiftStartedAt", 0L);
+        long now = System.currentTimeMillis();
+
+        if (shiftStartedAt <= 0) {
+            shiftStartedAt = now;
+        }
+
+        try {
+            DatabaseHelper.ResetResult result =
+                repository.resetShift(shiftStartedAt);
+
+            long deletedAmount = result != null ? result.amount : 0L;
+            long deletedCount = result != null ? result.count : 0L;
+
+            long curBalance = Math.max(0L, read("balance"));
+            long curTrips = Math.max(0L, read("trips"));
+            long curShiftEarned = Math.max(0L, read("shiftEarned"));
+            long curShiftTrips = Math.max(0L, read("shiftTrips"));
+
+            long newBalance = Math.max(
+                0L, curBalance - Math.min(curBalance, deletedAmount)
+            );
+            long newTrips = Math.max(
+                0L, curTrips - Math.min(curTrips, deletedCount)
+            );
+            long newShiftEarned = Math.max(
+                0L, curShiftEarned - Math.min(curShiftEarned, deletedAmount)
+            );
+            long newShiftTrips = Math.max(
+                0L, curShiftTrips - Math.min(curShiftTrips, deletedCount)
+            );
+
+            return prefs.edit()
+                .putLong("balance", newBalance)
+                .putLong("trips", newTrips)
+                .putLong("seconds", 0L)
+                .putLong("shiftEarned", newShiftEarned)
+                .putLong("shiftTrips", newShiftTrips)
+                .putLong("shiftStartedAt", 0L)
+                .putLong("startAt", 0L)
+                .putBoolean("running", false)
+                .remove("panel_undo_stack")
+                .remove("panel_last_trip_id")
+                .remove("panel_last_trip_amount")
+                .commit();
+
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private void confirmFinishShift() {
@@ -711,6 +810,12 @@ public class MainActivity extends Activity {
             handler.removeCallbacks(ticker);
             renderPage();
 
+            notifyUser(
+                NOTIF_SHIFT,
+                "Смена завершена",
+                "Заработок: " + money(earned) + " ₽, кругов: " + shiftTrips
+            );
+
             infoDialog(
                 "Смена завершена!",
                 "Смена сохранена в историю.\n\n" +
@@ -760,6 +865,14 @@ public class MainActivity extends Activity {
         editor.apply();
         renderPage();
 
+        if (prefs.getBoolean("shift_start_notifications", false)) {
+            notifyUser(
+                NOTIF_SHIFT,
+                "Смена начата",
+                "Таймер рейса запущен"
+            );
+        }
+
         handler.removeCallbacks(ticker);
         handler.post(ticker);
     }
@@ -781,72 +894,6 @@ public class MainActivity extends Activity {
         }
     };
 
-    private void finishTrip() {
-        if (!running) return;
-
-        long elapsed = Math.max(
-            1L,
-            (System.currentTimeMillis() - startAt) / 1000
-        );
-
-        long amount = pay();
-        long shiftEarned = read("shiftEarned");
-        long shiftTrips = read("shiftTrips");
-
-        if (balance > Long.MAX_VALUE - amount ||
-            trips == Long.MAX_VALUE ||
-            seconds > Long.MAX_VALUE - elapsed ||
-            shiftEarned > Long.MAX_VALUE - amount ||
-            shiftTrips == Long.MAX_VALUE) {
-            infoDialog("Предел счётчика", "Достигнут предел счётчика.");
-            return;
-        }
-
-        long finishTime = System.currentTimeMillis();
-        long shiftStartedAt = prefs.getLong("shiftStartedAt", 0);
-
-        if (shiftStartedAt <= 0) shiftStartedAt = startAt;
-
-        long recordId = repository.addTrip(
-            amount, finishTime, elapsed, "", "", "manual"
-        );
-
-        if (recordId <= 0) {
-            infoDialog(
-                "Рейс не сохранён",
-                "Не удалось сохранить рейс. Статистика не изменена."
-            );
-            return;
-        }
-
-        balance += amount;
-        trips++;
-        seconds += elapsed;
-
-        prefs.edit()
-            .putLong("balance", balance)
-            .putLong("trips", trips)
-            .putLong("seconds", seconds)
-            .putLong("shiftEarned", shiftEarned + amount)
-            .putLong("shiftTrips", shiftTrips + 1)
-            .putLong("shiftStartedAt", shiftStartedAt)
-            .putBoolean("running", false)
-            .putLong("startAt", 0)
-            .apply();
-
-        running = false;
-        startAt = 0;
-
-        handler.removeCallbacks(ticker);
-        renderPage();
-
-        infoDialog(
-            "Рейс завершён",
-            "+" + money(amount) + " ₽\nВремя: " +
-            formatTime(elapsed)
-        );
-    }
-
     private void showStats() {
         heading("Статистика", "Твои результаты и личные рекорды");
 
@@ -854,8 +901,6 @@ public class MainActivity extends Activity {
         long week = 0;
         long todayTrips = 0;
         long weekTrips = 0;
-        long bestDay = 0;
-        long bestDayTime = 0;
         long totalAmount = 0;
         long totalCount = 0;
         long totalDuration = 0;
@@ -943,16 +988,6 @@ public class MainActivity extends Activity {
                 if (itemDuration > 0) {
                     totalDuration = safeAdd(totalDuration, itemDuration);
                     durationCount++;
-                }
-            }
-
-            for (String key : daily.keySet()) {
-                long value = daily.get(key);
-                if (value > bestDay) {
-                    bestDay = value;
-                    bestDayTime = new SimpleDateFormat(
-                        "yyyyMMdd", Locale.US
-                    ).parse(key).getTime();
                 }
             }
 
@@ -1110,8 +1145,29 @@ public class MainActivity extends Activity {
             }
         }
 
+        // П.4 — сброс лучшего дня заработка
         LinearLayout records = card();
         records.addView(text("ЛИЧНЫЕ РЕКОРДЫ", 15, fg(), true));
+
+        long bestDay = read("best_day_amount");
+        long bestDayTime = read("best_day_time");
+
+        if (bestDay <= 0) {
+            // Если вручную не сбрасывали — считаем по истории
+            for (String key : daily.keySet()) {
+                long value = daily.get(key);
+                if (value > bestDay) {
+                    bestDay = value;
+                    try {
+                        Date d = dayKey.parse(key);
+                        bestDayTime = d != null ? d.getTime() : 0L;
+                    } catch (Exception ignored) {
+                        bestDayTime = 0L;
+                    }
+                }
+            }
+        }
+
         records.addView(text(
             "Самый прибыльный день: " + money(bestDay) + " ₽",
             14, accent(), true
@@ -1125,6 +1181,20 @@ public class MainActivity extends Activity {
                 12, muted(), false
             ));
         }
+
+        Button resetBest = button("СБРОСИТЬ ЛУЧШИЙ ДЕНЬ", cardColor());
+        records.addView(
+            resetBest,
+            new LinearLayout.LayoutParams(-1, dp(44))
+        );
+        resetBest.setOnClickListener(v -> {
+            prefs.edit()
+                .putLong("best_day_amount", 0L)
+                .putLong("best_day_time", 0L)
+                .apply();
+            renderPage();
+            showInline("Лучший день заработка сброшен");
+        });
     }
 
     private int calculateStreak(HashSet<String> allDays) {
@@ -1249,14 +1319,42 @@ public class MainActivity extends Activity {
             long todayCount = 0;
             long previousDaysCount = 0;
 
+            HashMap<String, Long> byDayCount = new HashMap<>();
+            HashMap<String, Long> byDayAmount = new HashMap<>();
+            SimpleDateFormat dayKey = new SimpleDateFormat(
+                "yyyyMMdd", Locale.US
+            );
+
             if (cursor != null) {
                 int summaryTimeColumn =
                     cursor.getColumnIndexOrThrow("created_at");
+                int summaryAmountColumn =
+                    cursor.getColumnIndexOrThrow("amount");
 
                 while (cursor.moveToNext()) {
                     long time = cursor.getLong(summaryTimeColumn);
-                    if (time >= todayStart) todayCount++;
-                    else previousDaysCount++;
+                    long amount = cursor.getLong(summaryAmountColumn);
+
+                    if (time >= todayStart) {
+                        todayCount++;
+                    } else {
+                        previousDaysCount++;
+
+                        Calendar d = Calendar.getInstance();
+                        d.setTimeInMillis(time);
+                        String key = dayKey.format(d.getTime());
+
+                        byDayCount.put(
+                            key,
+                            (byDayCount.containsKey(key)
+                                ? byDayCount.get(key) : 0L) + 1
+                        );
+                        byDayAmount.put(
+                            key,
+                            (byDayAmount.containsKey(key)
+                                ? byDayAmount.get(key) : 0L) + amount
+                        );
+                    }
                 }
 
                 cursor.moveToPosition(-1);
@@ -1268,10 +1366,23 @@ public class MainActivity extends Activity {
                 "Сегодня: " + todayCount,
                 18, accent(), true
             ));
-            summary.addView(text(
-                "За предыдущие дни: " + previousDaysCount,
-                14, fg(), false
-            ));
+
+            // П.5 — «За предыдущие дни» кликабельно, открывает список по дням
+            final long prevDays = previousDaysCount;
+            final HashMap<String, Long> dayCounts = byDayCount;
+            final HashMap<String, Long> dayAmounts = byDayAmount;
+
+            Button prevDaysBtn = button(
+                "За предыдущие дни: " + prevDays,
+                cardColor()
+            );
+            summary.addView(
+                prevDaysBtn,
+                new LinearLayout.LayoutParams(-1, dp(44))
+            );
+            prevDaysBtn.setOnClickListener(v ->
+                showDaysBreakdown(dayCounts, dayAmounts)
+            );
 
             if (cursor == null || cursor.getCount() == 0) {
                 card().addView(text(
@@ -1348,6 +1459,70 @@ public class MainActivity extends Activity {
         } finally {
             if (cursor != null) cursor.close();
         }
+    }
+
+    // П.5 — список по дням (кликабельные прошлые дни)
+    private void showDaysBreakdown(
+        HashMap<String, Long> counts,
+        HashMap<String, Long> amounts
+    ) {
+        if (counts.isEmpty()) {
+            infoDialog("Прошлые дни", "Записей за прошлые дни нет.");
+            return;
+        }
+
+        SimpleDateFormat dayKey = new SimpleDateFormat(
+            "yyyyMMdd", Locale.US
+        );
+        SimpleDateFormat display = new SimpleDateFormat(
+            "dd.MM.yyyy", Locale.getDefault()
+        );
+
+        ArrayList<String> keys = new ArrayList<>(counts.keySet());
+        Collections.sort(keys, Collections.reverseOrder());
+
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(1);
+        box.setPadding(dp(12), dp(8), dp(12), 0);
+
+        ScrollView scroll = new ScrollView(this);
+        scroll.addView(box);
+
+        for (String key : keys) {
+            try {
+                Date d = dayKey.parse(key);
+                if (d == null) continue;
+
+                long cnt = counts.get(key) != null ? counts.get(key) : 0L;
+                long amt = amounts.get(key) != null ? amounts.get(key) : 0L;
+
+                LinearLayout row = new LinearLayout(this);
+                row.setOrientation(1);
+                row.setPadding(dp(10), dp(10), dp(10), dp(10));
+                row.setBackground(shape(cardColor(), 12));
+
+                row.addView(text(display.format(d), 14, fg(), true));
+                row.addView(text(
+                    money(amt) + " ₽  •  " + cnt + " кругов",
+                    12, muted(), false
+                ));
+
+                LinearLayout.LayoutParams rp =
+                    new LinearLayout.LayoutParams(-1, -2);
+                rp.topMargin = dp(8);
+                box.addView(row, rp);
+
+            } catch (Exception ignored) {
+            }
+        }
+
+        AlertDialog d = new AlertDialog.Builder(this)
+            .setTitle("Круги за прошлые дни")
+            .setView(scroll)
+            .setPositiveButton("Закрыть", null)
+            .create();
+
+        showThemedDialog(d);
     }
 
     private JSONArray getGoals() {
@@ -1780,7 +1955,7 @@ public class MainActivity extends Activity {
         );
 
         String[] names = {
-            "Фиолетовая", "Белая", "Чёрная", "Красная",
+            "Фиолетовая", "Светлая", "Чёрная", "Красная",
             "Зелёная", "Жёлтая", "Синяя", "Голубая",
             "Розовая", "Оранжевая"
         };
@@ -2310,4 +2485,4 @@ public class MainActivity extends Activity {
 
         super.onDestroy();
     }
-}
+                    }
