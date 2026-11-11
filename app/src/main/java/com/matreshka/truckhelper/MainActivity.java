@@ -238,7 +238,7 @@ public class MainActivity extends Activity {
         return calendar.getTimeInMillis();
     }
 
-    // ---------------- УВЕДОМЛЕНИЯ (реально работающие) ----------------
+    // ---------------- УВЕДОМЛЕНИЯ ----------------
 
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= 26) {
@@ -247,7 +247,6 @@ public class MainActivity extends Activity {
                 "TruckLog",
                 NotificationManager.IMPORTANCE_DEFAULT
             );
-            channel.setDescription("Уведомления TruckLog");
             NotificationManager nm = (NotificationManager)
                 getSystemService(NOTIFICATION_SERVICE);
             if (nm != null) nm.createNotificationChannel(channel);
@@ -403,7 +402,6 @@ public class MainActivity extends Activity {
         addDrawerItem("▤", "Графики заработка", "charts");
         addDrawerItem("◷", "История кругов", "history");
         addDrawerItem("◎", "Калькулятор целей", "calculator");
-        // П.6 — «Оформление» убрано из меню, оно есть в настройках
         addDrawerItem("⚙", "Настройки", "settings");
 
         View space = new View(this);
@@ -563,10 +561,10 @@ public class MainActivity extends Activity {
         start.setEnabled(!running);
         start.setOnClickListener(v -> startTrip());
 
-        // П.3 — кнопка «ЗАВЕРШИТЬ РЕЙС +15000» убрана
+        // П.3: кнопка «Завершить рейс +15000» убрана
 
         Button finishShift = button(
-            running ? "СНАЧАЛА ЗАВЕРШИ ТЕКУЩИЙ РЕЙС"
+            running ? "ЗАВЕРШИТЬ СМЕНУ (рейс будет отменён)"
                     : "ЗАВЕРШИТЬ СМЕНУ",
             accent()
         );
@@ -576,11 +574,12 @@ public class MainActivity extends Activity {
         shiftParams.topMargin = dp(12);
         content.addView(finishShift, shiftParams);
 
-        finishShift.setEnabled(!running);
+        // Кнопка всегда активна — если идёт рейс, он просто отменится без выплаты
+        finishShift.setEnabled(true);
         finishShift.setOnClickListener(v -> confirmFinishShift());
 
         Button resetStats = button(
-            "СБРОСИТЬ СТАТИСТИКУ СМЕНЫ",
+            "СБРОСИТЬ ТЕКУЩИЙ БАЛАНС И КРУГИ",
             cardColor()
         );
 
@@ -608,11 +607,11 @@ public class MainActivity extends Activity {
 
     private void showHomeResetDialog() {
         AlertDialog dialog = new AlertDialog.Builder(this)
-            .setTitle("Сбросить статистику текущей смены?")
+            .setTitle("Сбросить текущий баланс и круги?")
             .setMessage(
-                "Круги текущей смены будут удалены из истории, " +
-                "а их заработок вычтен из общего баланса. " +
-                "Предыдущие дни и завершённые смены останутся без изменений."
+                "Будут обнулены только текущий баланс, количество кругов, " +
+                "заработок и таймер текущей смены. " +
+                "История рейсов, графики и общая статистика останутся без изменений."
             )
             .setNegativeButton("Отмена", null)
             .setPositiveButton("Сбросить", (d, which) -> {
@@ -620,11 +619,11 @@ public class MainActivity extends Activity {
                 if (saved) {
                     syncData();
                     renderPage();
-                    showInline("Смена сброшена. Баланс и история обновлены.");
+                    showInline("Баланс и круги сброшены. История сохранена.");
                 } else {
                     infoDialog(
                         "Сброс не выполнен",
-                        "Не удалось сохранить сброс статистики. Попробуй ещё раз."
+                        "Не удалось сохранить сброс. Попробуй ещё раз."
                     );
                 }
             })
@@ -634,50 +633,27 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * Универсальный сброс текущей смены:
-     * - удаляет все круги смены из SQLite (ручные + панель);
-     * - вычитает их заработок из общего баланса;
-     * - обнуляет секунды, shiftEarned, shiftTrips, shiftStartedAt, running.
+     * Простой сброс текущих показателей (П.2):
+     * - balance = 0
+     * - trips = 0
+     * - shiftEarned = 0
+     * - shiftTrips = 0
+     * - seconds = 0
+     * - shiftStartedAt = 0
+     * - startAt = 0
+     * - running = false
+     * - panel_undo_stack очищается
+     *
+     * История рейсов в SQLite НЕ трогается — графики и общая статистика остаются.
      */
     private boolean resetShiftNow() {
-        long shiftStartedAt = prefs.getLong("shiftStartedAt", 0L);
-        long now = System.currentTimeMillis();
-
-        if (shiftStartedAt <= 0) {
-            shiftStartedAt = now;
-        }
-
         try {
-            DatabaseHelper.ResetResult result =
-                repository.resetShift(shiftStartedAt);
-
-            long deletedAmount = result != null ? result.amount : 0L;
-            long deletedCount = result != null ? result.count : 0L;
-
-            long curBalance = Math.max(0L, read("balance"));
-            long curTrips = Math.max(0L, read("trips"));
-            long curShiftEarned = Math.max(0L, read("shiftEarned"));
-            long curShiftTrips = Math.max(0L, read("shiftTrips"));
-
-            long newBalance = Math.max(
-                0L, curBalance - Math.min(curBalance, deletedAmount)
-            );
-            long newTrips = Math.max(
-                0L, curTrips - Math.min(curTrips, deletedCount)
-            );
-            long newShiftEarned = Math.max(
-                0L, curShiftEarned - Math.min(curShiftEarned, deletedAmount)
-            );
-            long newShiftTrips = Math.max(
-                0L, curShiftTrips - Math.min(curShiftTrips, deletedCount)
-            );
-
             return prefs.edit()
-                .putLong("balance", newBalance)
-                .putLong("trips", newTrips)
+                .putLong("balance", 0L)
+                .putLong("trips", 0L)
+                .putLong("shiftEarned", 0L)
+                .putLong("shiftTrips", 0L)
                 .putLong("seconds", 0L)
-                .putLong("shiftEarned", newShiftEarned)
-                .putLong("shiftTrips", newShiftTrips)
                 .putLong("shiftStartedAt", 0L)
                 .putLong("startAt", 0L)
                 .putBoolean("running", false)
@@ -692,11 +668,6 @@ public class MainActivity extends Activity {
     }
 
     private void confirmFinishShift() {
-        if (running) {
-            showInline("Сначала заверши текущий рейс");
-            return;
-        }
-
         long earned = Math.max(0L, read("shiftEarned"));
         long shiftTrips = Math.max(0L, read("shiftTrips"));
 
@@ -711,6 +682,9 @@ public class MainActivity extends Activity {
                 "Заработок: " + money(earned) + " ₽\n" +
                 "Кругов: " + shiftTrips + "\n" +
                 "Время: " + formatTime(seconds) + "\n\n" +
+                (running
+                    ? "Текущий незавершённый рейс будет отменён без выплаты.\n\n"
+                    : "") +
                 "Результаты будут сохранены в историю смен. " +
                 "Общий баланс и история кругов останутся без изменений."
             )
@@ -724,8 +698,6 @@ public class MainActivity extends Activity {
     }
 
     private void finishShift() {
-        if (running) return;
-
         long earned = Math.max(0L, read("shiftEarned"));
         long shiftTrips = Math.max(0L, read("shiftTrips"));
         long duration = Math.max(0L, read("seconds"));
@@ -733,6 +705,26 @@ public class MainActivity extends Activity {
         if (earned <= 0 && shiftTrips <= 0) {
             showInline("В текущей смене пока нет кругов");
             return;
+        }
+
+        // Сначала останавливаем рейс, если он идёт
+        if (running) {
+            boolean stopped = prefs.edit()
+                .putBoolean("running", false)
+                .putLong("startAt", 0L)
+                .commit();
+
+            if (!stopped) {
+                infoDialog(
+                    "Смена не закрыта",
+                    "Не удалось остановить текущий рейс. Попробуй ещё раз."
+                );
+                return;
+            }
+
+            running = false;
+            startAt = 0L;
+            handler.removeCallbacks(ticker);
         }
 
         long finishTime = System.currentTimeMillis();
@@ -1145,7 +1137,6 @@ public class MainActivity extends Activity {
             }
         }
 
-        // П.4 — сброс лучшего дня заработка
         LinearLayout records = card();
         records.addView(text("ЛИЧНЫЕ РЕКОРДЫ", 15, fg(), true));
 
@@ -1153,7 +1144,6 @@ public class MainActivity extends Activity {
         long bestDayTime = read("best_day_time");
 
         if (bestDay <= 0) {
-            // Если вручную не сбрасывали — считаем по истории
             for (String key : daily.keySet()) {
                 long value = daily.get(key);
                 if (value > bestDay) {
@@ -1367,13 +1357,11 @@ public class MainActivity extends Activity {
                 18, accent(), true
             ));
 
-            // П.5 — «За предыдущие дни» кликабельно, открывает список по дням
-            final long prevDays = previousDaysCount;
             final HashMap<String, Long> dayCounts = byDayCount;
             final HashMap<String, Long> dayAmounts = byDayAmount;
 
             Button prevDaysBtn = button(
-                "За предыдущие дни: " + prevDays,
+                "За предыдущие дни: " + previousDaysCount,
                 cardColor()
             );
             summary.addView(
@@ -1461,7 +1449,6 @@ public class MainActivity extends Activity {
         }
     }
 
-    // П.5 — список по дням (кликабельные прошлые дни)
     private void showDaysBreakdown(
         HashMap<String, Long> counts,
         HashMap<String, Long> amounts
@@ -2485,4 +2472,4 @@ public class MainActivity extends Activity {
 
         super.onDestroy();
     }
-                    }
+                        }
