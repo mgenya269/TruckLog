@@ -561,8 +561,6 @@ public class MainActivity extends Activity {
         start.setEnabled(!running);
         start.setOnClickListener(v -> startTrip());
 
-        // П.3: кнопка «Завершить рейс +15000» убрана
-
         Button finishShift = button(
             running ? "ЗАВЕРШИТЬ СМЕНУ (рейс будет отменён)"
                     : "ЗАВЕРШИТЬ СМЕНУ",
@@ -574,7 +572,7 @@ public class MainActivity extends Activity {
         shiftParams.topMargin = dp(12);
         content.addView(finishShift, shiftParams);
 
-        // Кнопка всегда активна — если идёт рейс, он просто отменится без выплаты
+        // П.1: завершать смену можно всегда, даже без кругов
         finishShift.setEnabled(true);
         finishShift.setOnClickListener(v -> confirmFinishShift());
 
@@ -632,20 +630,6 @@ public class MainActivity extends Activity {
         showThemedDialog(dialog);
     }
 
-    /**
-     * Простой сброс текущих показателей (П.2):
-     * - balance = 0
-     * - trips = 0
-     * - shiftEarned = 0
-     * - shiftTrips = 0
-     * - seconds = 0
-     * - shiftStartedAt = 0
-     * - startAt = 0
-     * - running = false
-     * - panel_undo_stack очищается
-     *
-     * История рейсов в SQLite НЕ трогается — графики и общая статистика остаются.
-     */
     private boolean resetShiftNow() {
         try {
             return prefs.edit()
@@ -667,14 +651,12 @@ public class MainActivity extends Activity {
         }
     }
 
+    /**
+     * П.1: завершать смену можно даже без кругов.
+     */
     private void confirmFinishShift() {
         long earned = Math.max(0L, read("shiftEarned"));
         long shiftTrips = Math.max(0L, read("shiftTrips"));
-
-        if (earned <= 0 && shiftTrips <= 0) {
-            showInline("В текущей смене пока нет кругов");
-            return;
-        }
 
         AlertDialog finishShiftDialog = new AlertDialog.Builder(this)
             .setTitle("Завершить смену?")
@@ -697,17 +679,14 @@ public class MainActivity extends Activity {
         showThemedDialog(finishShiftDialog);
     }
 
+    /**
+     * П.1: сохраняем смену даже без кругов.
+     */
     private void finishShift() {
         long earned = Math.max(0L, read("shiftEarned"));
         long shiftTrips = Math.max(0L, read("shiftTrips"));
         long duration = Math.max(0L, read("seconds"));
 
-        if (earned <= 0 && shiftTrips <= 0) {
-            showInline("В текущей смене пока нет кругов");
-            return;
-        }
-
-        // Сначала останавливаем рейс, если он идёт
         if (running) {
             boolean stopped = prefs.edit()
                 .putBoolean("running", false)
@@ -1297,33 +1276,39 @@ public class MainActivity extends Activity {
         showThemedDialog(dialog);
     }
 
+    /**
+     * П.2: История кругов с «папкой» по дням.
+     * Внутри — список дней: дата (дд.мм.гггг), сумма и кругов.
+     * Без дня недели. Сортировка — новые сверху.
+     * Данные синхронизированы с графиком и статистикой (общий источник — SQLite).
+     */
     private void showHistory() {
         heading("История кругов", "Сохранённые записи рейсов");
 
         Cursor cursor = null;
 
+        HashMap<String, Long> byDayCount = new HashMap<>();
+        HashMap<String, Long> byDayAmount = new HashMap<>();
+        SimpleDateFormat dayKey = new SimpleDateFormat(
+            "yyyyMMdd", Locale.US
+        );
+
+        long todayStart = startOfDay(System.currentTimeMillis());
+        long todayCount = 0;
+        long previousDaysCount = 0;
+
         try {
             cursor = repository.getTripsHistory();
 
-            long todayStart = startOfDay(System.currentTimeMillis());
-            long todayCount = 0;
-            long previousDaysCount = 0;
-
-            HashMap<String, Long> byDayCount = new HashMap<>();
-            HashMap<String, Long> byDayAmount = new HashMap<>();
-            SimpleDateFormat dayKey = new SimpleDateFormat(
-                "yyyyMMdd", Locale.US
-            );
-
             if (cursor != null) {
-                int summaryTimeColumn =
+                int timeColumn =
                     cursor.getColumnIndexOrThrow("created_at");
-                int summaryAmountColumn =
+                int amountColumn =
                     cursor.getColumnIndexOrThrow("amount");
 
                 while (cursor.moveToNext()) {
-                    long time = cursor.getLong(summaryTimeColumn);
-                    long amount = cursor.getLong(summaryAmountColumn);
+                    long time = cursor.getLong(timeColumn);
+                    long amount = cursor.getLong(amountColumn);
 
                     if (time >= todayStart) {
                         todayCount++;
@@ -1360,15 +1345,25 @@ public class MainActivity extends Activity {
             final HashMap<String, Long> dayCounts = byDayCount;
             final HashMap<String, Long> dayAmounts = byDayAmount;
 
-            Button prevDaysBtn = button(
-                "За предыдущие дни: " + previousDaysCount,
-                cardColor()
+            // «Папка» — История по дням
+            LinearLayout folderCard = card();
+            folderCard.addView(text(
+                "ИСТОРИЯ ПО ДНЯМ", 15, fg(), true
+            ));
+            folderCard.addView(text(
+                "Все прошлые дни: дата, сумма и количество кругов",
+                12, muted(), false
+            ));
+
+            Button openDays = button(
+                "📁  ОТКРЫТЬ ПО ДНЯМ (" + previousDaysCount + ")",
+                accent()
             );
-            summary.addView(
-                prevDaysBtn,
-                new LinearLayout.LayoutParams(-1, dp(44))
+            folderCard.addView(
+                openDays,
+                new LinearLayout.LayoutParams(-1, dp(48))
             );
-            prevDaysBtn.setOnClickListener(v ->
+            openDays.setOnClickListener(v ->
                 showDaysBreakdown(dayCounts, dayAmounts)
             );
 
@@ -1449,6 +1444,10 @@ public class MainActivity extends Activity {
         }
     }
 
+    /**
+     * П.2: разбивка по дням — дата (дд.мм.гггг), сумма и количество кругов.
+     * Без дня недели. Сортировка — новые сверху.
+     */
     private void showDaysBreakdown(
         HashMap<String, Long> counts,
         HashMap<String, Long> amounts
@@ -2472,4 +2471,4 @@ public class MainActivity extends Activity {
 
         super.onDestroy();
     }
-                        }
+                                       }
