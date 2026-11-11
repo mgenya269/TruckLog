@@ -32,6 +32,7 @@ public class MainActivity extends Activity {
     private LinearLayout root, content;
     private FrameLayout frame;
     private LinearLayout bottomNav;
+    private LinearLayout header;
     private String page = "home";
 
     private TextView timerView;
@@ -210,8 +211,6 @@ public class MainActivity extends Activity {
         return false;
     }
 
-    // ---------------- УВЕДОМЛЕНИЯ ----------------
-
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= 26) {
             NotificationChannel channel = new NotificationChannel(
@@ -248,6 +247,17 @@ public class MainActivity extends Activity {
     @Override
     public void onCreate(Bundle state) {
         super.onCreate(state);
+
+        // Разрешаем рисовать под статус-баром и навигационной панелью
+        if (Build.VERSION.SDK_INT >= 21) {
+            Window window = getWindow();
+            window.getDecorView().setSystemUiVisibility(
+                View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
+                View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
+                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+            );
+        }
+
         prefs = getSharedPreferences("truck_stats", MODE_PRIVATE);
         repository = DataRepository.getInstance(this);
         if (!repository.initialize()) {
@@ -271,16 +281,14 @@ public class MainActivity extends Activity {
         running = prefs.getBoolean("running", false);
     }
 
-    // ---------------- КАРКАС ----------------
-
     private void buildBase() {
         frame = new FrameLayout(this);
         root = new LinearLayout(this);
         root.setOrientation(1);
         root.setBackgroundColor(background());
+        root.setFitsSystemWindows(false);
 
-        // Шапка
-        LinearLayout header = new LinearLayout(this);
+        header = new LinearLayout(this);
         header.setGravity(Gravity.CENTER_VERTICAL);
         header.setPadding(dp(20), dp(18), dp(20), dp(10));
 
@@ -310,12 +318,13 @@ public class MainActivity extends Activity {
         scroll.addView(content);
         root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
 
-        // Нижняя навигация (5 вкладок)
+        // Нижняя навигация — wrap_content + minHeight
         bottomNav = new LinearLayout(this);
         bottomNav.setOrientation(0);
         bottomNav.setBackground(shape(cardColor(), 0));
         bottomNav.setPadding(dp(6), dp(8), dp(6), dp(8));
         bottomNav.setGravity(Gravity.CENTER);
+        bottomNav.setMinimumHeight(dp(60));
 
         addNavItem("⌂", "Главная", "home");
         addNavItem("▦", "Стата", "stats");
@@ -323,33 +332,38 @@ public class MainActivity extends Activity {
         addNavItem("◎", "Цели", "calculator");
         addNavItem("⚙", "Ещё", "settings");
 
-        root.addView(bottomNav, new LinearLayout.LayoutParams(-1, dp(66)));
+        root.addView(bottomNav, new LinearLayout.LayoutParams(-1, -2));
 
-        // **ИНСЕТЫ** — синхронизация с системной панелью навигации
-        if (Build.VERSION.SDK_INT >= 21) {
-            root.setOnApplyWindowInsetsListener((v, insets) -> {
-                int top = insets.getSystemWindowInsetTop();
-                int bottom = insets.getSystemWindowInsetBottom();
+        // Insets: поднимаем шапку и bottomNav над системными панелями
+        final LinearLayout headerRef = header;
+        final LinearLayout navRef = bottomNav;
+        root.setOnApplyWindowInsetsListener((v, insets) -> {
+            int top;
+            int bottom;
+            if (Build.VERSION.SDK_INT >= 20) {
+                top = insets.getSystemWindowInsetTop();
+                bottom = insets.getSystemWindowInsetBottom();
+            } else {
+                top = 0;
+                bottom = 0;
+            }
 
-                // Шапка не должна залезать под статус-бар
-                if (header.getChildCount() > 0) {
-                    header.setPadding(dp(20), dp(18) + top, dp(20), dp(10));
-                }
+            headerRef.setPadding(dp(20), dp(18) + top, dp(20), dp(10));
 
-                // Bottom nav не должна перекрываться системной панелью
-                if (bottomNav != null) {
-                    bottomNav.setPadding(dp(6), dp(8), dp(6), dp(8) + bottom);
-                }
+            ViewGroup.LayoutParams rawLp = navRef.getLayoutParams();
+            if (rawLp instanceof LinearLayout.LayoutParams) {
+                LinearLayout.LayoutParams navLp = (LinearLayout.LayoutParams) rawLp;
+                navLp.bottomMargin = bottom;
+                navRef.setLayoutParams(navLp);
+            }
 
-                return insets;
-            });
-        }
+            return insets;
+        });
 
         frame.addView(root);
         setContentView(frame);
 
-        // Запросить применение insets
-        if (Build.VERSION.SDK_INT >= 21) {
+        if (Build.VERSION.SDK_INT >= 20) {
             root.requestApplyInsets();
         }
     }
@@ -358,7 +372,7 @@ public class MainActivity extends Activity {
         LinearLayout item = new LinearLayout(this);
         item.setOrientation(1);
         item.setGravity(Gravity.CENTER);
-        item.setPadding(dp(4), dp(4), dp(4), dp(4));
+        item.setPadding(dp(4), dp(6), dp(4), dp(6));
 
         boolean active = target.equals(page);
 
@@ -432,8 +446,6 @@ public class MainActivity extends Activity {
     private boolean blockVisible(String key) {
         return prefs.getBoolean("home_block_" + key, true);
     }
-
-    // ---------------- ГЛАВНЫЙ ЭКРАН ----------------
 
     private void showHome() {
         LinearLayout hero = new LinearLayout(this);
@@ -538,13 +550,9 @@ public class MainActivity extends Activity {
             overlay.setOnClickListener(v -> toggleOverlay());
         }
 
-        // **ГРАФИКИ на главном** — компактная карточка
         LinearLayout chartCard = card();
         chartCard.addView(text("ГРАФИК ЗАРАБОТКА — 7 ДНЕЙ", 12, muted(), true));
-        chartCard.addView(
-            new EarningsChart(this),
-            new LinearLayout.LayoutParams(-1, dp(200))
-        );
+        chartCard.addView(new EarningsChart(this), new LinearLayout.LayoutParams(-1, dp(200)));
         Button openFull = button("ОТКРЫТЬ ПОЛНЫЙ ГРАФИК", cardColor());
         openFull.setBackground(outline(cardColor(), 14, accent()));
         chartCard.addView(openFull, new LinearLayout.LayoutParams(-1, dp(46)));
@@ -776,8 +784,6 @@ public class MainActivity extends Activity {
         renderPage();
         showInline("+" + money(amount) + " ₽ — круг засчитан");
     }
-
-    // ---------------- СТАТИСТИКА ----------------
 
     private void showStats() {
         heading("Статистика", "Результаты и личные рекорды");
@@ -1042,8 +1048,6 @@ public class MainActivity extends Activity {
         showThemedDialog(dialog);
     }
 
-    // ---------------- ИСТОРИЯ ----------------
-
     private void showHistory() {
         heading("История", "Круги и разбивка по дням");
 
@@ -1164,8 +1168,6 @@ public class MainActivity extends Activity {
             .create();
         showThemedDialog(d);
     }
-
-    // ---------------- ЦЕЛИ ----------------
 
     private JSONArray getGoals() {
         try {
@@ -1307,8 +1309,6 @@ public class MainActivity extends Activity {
         showThemedDialog(deleteGoalDialog);
     }
 
-    // ---------------- ГРАФИКИ ----------------
-
     private void showCharts() {
         heading("Графики", "Заработок за 7 дней");
         LinearLayout c = card();
@@ -1400,8 +1400,6 @@ public class MainActivity extends Activity {
         return String.valueOf(value);
     }
 
-    // ---------------- ТЕМЫ ----------------
-
     private void showThemes() {
         heading("Оформление", "Цветовая тема приложения");
 
@@ -1439,8 +1437,6 @@ public class MainActivity extends Activity {
             });
         }
     }
-
-    // ---------------- ЕЩЁ (настройки) ----------------
 
     private void showSettings() {
         heading("Ещё", "Настройки и оформление");
