@@ -1,3 +1,4 @@
+// Файл: DatabaseHelper.java
 package com.matreshka.truckhelper;
 
 import android.content.ContentValues;
@@ -10,12 +11,22 @@ import android.database.sqlite.SQLiteOpenHelper;
 public final class DatabaseHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "trucklog.db";
-    private static final int DATABASE_VERSION = 4;
+    private static final int DATABASE_VERSION = 3;
 
     private static final String TABLE_TRIPS = "trips_history";
     private static final String TABLE_SHIFTS = "shifts_history";
-    private static final String TABLE_DAILY_RESETS = "daily_metric_resets";
     private static final String KEY_MIGRATION = "database_migration_v1";
+
+    /** Результат сброса смены: сколько денег и сколько кругов удалено. */
+    public static class ResetResult {
+        public final long amount;
+        public final long count;
+
+        public ResetResult(long amount, long count) {
+            this.amount = amount;
+            this.count = count;
+        }
+    }
 
     public DatabaseHelper(Context context) {
         super(context.getApplicationContext(),
@@ -45,16 +56,7 @@ public final class DatabaseHelper extends SQLiteOpenHelper {
                 "note TEXT NOT NULL DEFAULT '', " +
                 "shift_key TEXT DEFAULT NULL)");
 
-        createDailyResetTable(db);
         createIndexes(db);
-    }
-
-    private void createDailyResetTable(SQLiteDatabase db) {
-        db.execSQL("CREATE TABLE IF NOT EXISTS " + TABLE_DAILY_RESETS + " (" +
-                "day_start INTEGER NOT NULL, " +
-                "metric TEXT NOT NULL, " +
-                "reset_at INTEGER NOT NULL, " +
-                "PRIMARY KEY(day_start, metric))");
     }
 
     private void createIndexes(SQLiteDatabase db) {
@@ -85,10 +87,6 @@ public final class DatabaseHelper extends SQLiteOpenHelper {
         if (oldVersion < 3) {
             db.execSQL("ALTER TABLE " + TABLE_SHIFTS +
                     " ADD COLUMN shift_key TEXT DEFAULT NULL");
-        }
-
-        if (oldVersion < 4) {
-            createDailyResetTable(db);
         }
 
         createIndexes(db);
@@ -230,6 +228,43 @@ public final class DatabaseHelper extends SQLiteOpenHelper {
         ) > 0;
     }
 
+    /**
+     * Удаляет все круги текущей смены (created_at >= shiftStartedAt)
+     * и возвращает сумму их заработка и количество.
+     *
+     * Это универсальный сброс: удаляет и ручные рейсы, и круги
+     * с плавающей панели, попавшие в текущую смену.
+     */
+    public synchronized ResetResult resetShift(long shiftStartedAt) {
+        if (shiftStartedAt <= 0) {
+            return new ResetResult(0, 0);
+        }
+
+        SQLiteDatabase db = getWritableDatabase();
+
+        long amount = 0;
+        long count = 0;
+
+        try (Cursor c = db.rawQuery(
+                "SELECT COALESCE(SUM(amount), 0), COUNT(*) FROM " +
+                        TABLE_TRIPS + " WHERE created_at >= ?",
+                new String[]{String.valueOf(shiftStartedAt)}
+        )) {
+            if (c.moveToFirst()) {
+                amount = c.getLong(0);
+                count = c.getLong(1);
+            }
+        }
+
+        db.delete(
+                TABLE_TRIPS,
+                "created_at >= ?",
+                new String[]{String.valueOf(shiftStartedAt)}
+        );
+
+        return new ResetResult(amount, count);
+    }
+
     // Старый метод сохранения смены оставлен для совместимости.
     public synchronized long addShift(
             long earned,
@@ -256,7 +291,6 @@ public final class DatabaseHelper extends SQLiteOpenHelper {
 
     // Защищённое сохранение смены.
     // Повторный вызов с тем же shiftKey не создаёт новую запись.
-    // Вместо этого возвращается ID уже сохранённой смены.
     public synchronized long addShift(
             long earned,
             long tripCount,
@@ -303,8 +337,6 @@ public final class DatabaseHelper extends SQLiteOpenHelper {
             return insertedId;
         }
 
-        // Если запись уже появилась, возвращаем её ID.
-        // Если произошла другая ошибка, вернётся -1.
         return getShiftIdByKey(db, shiftKey);
     }
 
@@ -386,69 +418,6 @@ public final class DatabaseHelper extends SQLiteOpenHelper {
         }
     }
 
-
-    public synchronized boolean saveDailyMetricReset(
-            long dayStart,
-            String metric,
-            long resetAt
-    ) {
-        if (dayStart < 0 ||
-                resetAt <= 0 ||
-                !("earnings".equals(metric) || "trips".equals(metric))) {
-            return false;
-        }
-
-        ContentValues values = new ContentValues();
-        values.put("day_start", dayStart);
-        values.put("metric", metric);
-        values.put("reset_at", resetAt);
-
-        return getWritableDatabase().insertWithOnConflict(
-                TABLE_DAILY_RESETS,
-                null,
-                values,
-                SQLiteDatabase.CONFLICT_REPLACE
-        ) > 0;
-    }
-
-    public synchronized long getDailyMetricReset(
-            long dayStart,
-            String metric
-    ) {
-        try (Cursor cursor = getReadableDatabase().query(
-                TABLE_DAILY_RESETS,
-                new String[]{"reset_at"},
-                "day_start = ? AND metric = ?",
-                new String[]{
-                        String.valueOf(dayStart),
-                        metric
-                },
-                null,
-                null,
-                null,
-                "1"
-        )) {
-            return cursor.moveToFirst() ? cursor.getLong(0) : 0L;
-        }
-    }
-
-    public synchronized boolean clearAllData() {
-        SQLiteDatabase db = getWritableDatabase();
-        db.beginTransaction();
-
-        try {
-            db.delete(TABLE_TRIPS, null, null);
-            db.delete(TABLE_SHIFTS, null, null);
-            db.delete(TABLE_DAILY_RESETS, null, null);
-            db.setTransactionSuccessful();
-            return true;
-        } catch (Exception e) {
-            return false;
-        } finally {
-            db.endTransaction();
-        }
-    }
-
     public synchronized long getLatestTripId() {
         try (Cursor cursor = getReadableDatabase().rawQuery(
                 "SELECT id FROM " + TABLE_TRIPS +
@@ -471,4 +440,4 @@ public final class DatabaseHelper extends SQLiteOpenHelper {
     public synchronized void close() {
         super.close();
     }
-}
+                    }
