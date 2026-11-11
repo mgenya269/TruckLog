@@ -17,7 +17,6 @@ public final class DatabaseHelper extends SQLiteOpenHelper {
     private static final String TABLE_SHIFTS = "shifts_history";
     private static final String KEY_MIGRATION = "database_migration_v1";
 
-    /** Результат сброса смены: сколько денег и сколько кругов удалено. */
     public static class ResetResult {
         public final long amount;
         public final long count;
@@ -93,11 +92,8 @@ public final class DatabaseHelper extends SQLiteOpenHelper {
     }
 
     public synchronized boolean migrateOldData(Context context) {
-
         Context appContext = context.getApplicationContext();
-
-        SharedPreferences prefs = appContext.getSharedPreferences(
-                "truck_stats", Context.MODE_PRIVATE);
+        SharedPreferences prefs = appContext.getSharedPreferences("truck_stats", Context.MODE_PRIVATE);
 
         if (prefs.getBoolean(KEY_MIGRATION, false)) {
             return true;
@@ -105,35 +101,24 @@ public final class DatabaseHelper extends SQLiteOpenHelper {
 
         SQLiteDatabase db = getWritableDatabase();
         boolean committed = false;
-
         db.beginTransaction();
 
         try {
-            int count = prefs.getInt(
-                    "records_count",
-                    prefs.getInt("record_count", 200)
-            );
-
+            int count = prefs.getInt("records_count", prefs.getInt("record_count", 200));
             count = Math.max(0, Math.min(count, 200));
 
             for (int i = 0; i < count; i++) {
-
                 String amountKey = "record_amount_" + i;
                 String timeKey = "record_time_" + i;
                 String durationKey = "record_duration_" + i;
 
-                if (!prefs.contains(amountKey) ||
-                        !prefs.contains(timeKey)) {
-                    continue;
-                }
+                if (!prefs.contains(amountKey) || !prefs.contains(timeKey)) continue;
 
                 long amount = prefs.getLong(amountKey, 0L);
                 long createdAt = prefs.getLong(timeKey, 0L);
                 long duration = prefs.getLong(durationKey, 0L);
 
-                if (amount <= 0 || createdAt <= 0) {
-                    continue;
-                }
+                if (amount <= 0 || createdAt <= 0) continue;
 
                 ContentValues values = new ContentValues();
                 values.put("amount", amount);
@@ -144,44 +129,24 @@ public final class DatabaseHelper extends SQLiteOpenHelper {
                 values.put("source", "legacy");
                 values.put("legacy_index", i);
 
-                db.insertWithOnConflict(
-                        TABLE_TRIPS,
-                        null,
-                        values,
-                        SQLiteDatabase.CONFLICT_IGNORE
-                );
+                db.insertWithOnConflict(TABLE_TRIPS, null, values, SQLiteDatabase.CONFLICT_IGNORE);
             }
 
             db.setTransactionSuccessful();
             committed = true;
-
         } catch (Exception e) {
             committed = false;
-
         } finally {
             db.endTransaction();
         }
 
-        if (!committed) {
-            return false;
-        }
+        if (!committed) return false;
 
-        return prefs.edit()
-                .putBoolean(KEY_MIGRATION, true)
-                .commit();
+        return prefs.edit().putBoolean(KEY_MIGRATION, true).commit();
     }
 
-    public synchronized long addTrip(
-            long amount,
-            long createdAt,
-            long duration,
-            String route,
-            String note,
-            String source
-    ) {
-        if (amount <= 0 || createdAt <= 0) {
-            return -1;
-        }
+    public synchronized long addTrip(long amount, long createdAt, long duration, String route, String note, String source) {
+        if (amount <= 0 || createdAt <= 0) return -1;
 
         ContentValues values = new ContentValues();
         values.put("amount", amount);
@@ -192,162 +157,72 @@ public final class DatabaseHelper extends SQLiteOpenHelper {
         values.put("source", source == null ? "manual" : source);
         values.putNull("legacy_index");
 
-        return getWritableDatabase().insert(
-                TABLE_TRIPS, null, values);
+        return getWritableDatabase().insert(TABLE_TRIPS, null, values);
     }
 
-    // Старый метод оставлен для совместимости с существующим кодом.
     public synchronized boolean deleteTrip(long id) {
         if (id <= 0) return false;
-
-        return getWritableDatabase().delete(
-                TABLE_TRIPS,
-                "id = ?",
-                new String[]{String.valueOf(id)}
-        ) > 0;
+        return getWritableDatabase().delete(TABLE_TRIPS, "id = ?", new String[]{String.valueOf(id)}) > 0;
     }
 
-    // Защищённое удаление: запись удаляется только при совпадении источника.
-    public synchronized boolean deleteTrip(
-            long id,
-            String expectedSource
-    ) {
-        if (id <= 0 ||
-                expectedSource == null ||
-                expectedSource.trim().isEmpty()) {
-            return false;
-        }
-
-        return getWritableDatabase().delete(
-                TABLE_TRIPS,
-                "id = ? AND source = ?",
-                new String[]{
-                        String.valueOf(id),
-                        expectedSource
-                }
-        ) > 0;
+    public synchronized boolean deleteTrip(long id, String expectedSource) {
+        if (id <= 0 || expectedSource == null || expectedSource.trim().isEmpty()) return false;
+        return getWritableDatabase().delete(TABLE_TRIPS, "id = ? AND source = ?",
+                new String[]{String.valueOf(id), expectedSource}) > 0;
     }
 
-    /**
-     * Удаляет все круги текущей смены (created_at >= shiftStartedAt)
-     * и возвращает сумму их заработка и количество.
-     *
-     * Это универсальный сброс: удаляет и ручные рейсы, и круги
-     * с плавающей панели, попавшие в текущую смену.
-     */
+    // П.2: Удаление кругов за выбранный диапазон дат
+    public synchronized int deleteTripsInRange(long start, long end) {
+        if (start <= 0 || end <= start) return 0;
+        return getWritableDatabase().delete(
+                TABLE_TRIPS,
+                "created_at >= ? AND created_at < ?",
+                new String[]{String.valueOf(start), String.valueOf(end)}
+        );
+    }
+
     public synchronized ResetResult resetShift(long shiftStartedAt) {
-        if (shiftStartedAt <= 0) {
-            return new ResetResult(0, 0);
-        }
+        if (shiftStartedAt <= 0) return new ResetResult(0, 0);
 
         SQLiteDatabase db = getWritableDatabase();
-
         long amount = 0;
         long count = 0;
 
-        try (Cursor c = db.rawQuery(
-                "SELECT COALESCE(SUM(amount), 0), COUNT(*) FROM " +
-                        TABLE_TRIPS + " WHERE created_at >= ?",
-                new String[]{String.valueOf(shiftStartedAt)}
-        )) {
+        try (Cursor c = db.rawQuery("SELECT COALESCE(SUM(amount), 0), COUNT(*) FROM " + TABLE_TRIPS + " WHERE created_at >= ?",
+                new String[]{String.valueOf(shiftStartedAt)})) {
             if (c.moveToFirst()) {
                 amount = c.getLong(0);
                 count = c.getLong(1);
             }
         }
 
-        db.delete(
-                TABLE_TRIPS,
-                "created_at >= ?",
-                new String[]{String.valueOf(shiftStartedAt)}
-        );
-
+        db.delete(TABLE_TRIPS, "created_at >= ?", new String[]{String.valueOf(shiftStartedAt)});
         return new ResetResult(amount, count);
     }
 
-    // Старый метод сохранения смены оставлен для совместимости.
-    public synchronized long addShift(
-            long earned,
-            long tripCount,
-            long duration,
-            long startedAt,
-            long finishedAt,
-            String note
-    ) {
+    public synchronized long addShift(long earned, long tripCount, long duration, long startedAt, long finishedAt, String note) {
         if (earned < 0 || tripCount < 0) return -1;
-
-        ContentValues values = createShiftValues(
-                earned,
-                tripCount,
-                duration,
-                startedAt,
-                finishedAt,
-                note
-        );
-
-        return getWritableDatabase().insert(
-                TABLE_SHIFTS, null, values);
+        ContentValues values = createShiftValues(earned, tripCount, duration, startedAt, finishedAt, note);
+        return getWritableDatabase().insert(TABLE_SHIFTS, null, values);
     }
 
-    // Защищённое сохранение смены.
-    // Повторный вызов с тем же shiftKey не создаёт новую запись.
-    public synchronized long addShift(
-            long earned,
-            long tripCount,
-            long duration,
-            long startedAt,
-            long finishedAt,
-            String note,
-            String shiftKey
-    ) {
-        if (earned < 0 ||
-                tripCount < 0 ||
-                shiftKey == null ||
-                shiftKey.trim().isEmpty()) {
-            return -1;
-        }
+    public synchronized long addShift(long earned, long tripCount, long duration, long startedAt, long finishedAt, String note, String shiftKey) {
+        if (earned < 0 || tripCount < 0 || shiftKey == null || shiftKey.trim().isEmpty()) return -1;
 
         SQLiteDatabase db = getWritableDatabase();
-
         long existingId = getShiftIdByKey(db, shiftKey);
+        if (existingId > 0) return existingId;
 
-        if (existingId > 0) {
-            return existingId;
-        }
-
-        ContentValues values = createShiftValues(
-                earned,
-                tripCount,
-                duration,
-                startedAt,
-                finishedAt,
-                note
-        );
-
+        ContentValues values = createShiftValues(earned, tripCount, duration, startedAt, finishedAt, note);
         values.put("shift_key", shiftKey);
 
-        long insertedId = db.insertWithOnConflict(
-                TABLE_SHIFTS,
-                null,
-                values,
-                SQLiteDatabase.CONFLICT_IGNORE
-        );
-
-        if (insertedId > 0) {
-            return insertedId;
-        }
+        long insertedId = db.insertWithOnConflict(TABLE_SHIFTS, null, values, SQLiteDatabase.CONFLICT_IGNORE);
+        if (insertedId > 0) return insertedId;
 
         return getShiftIdByKey(db, shiftKey);
     }
 
-    private ContentValues createShiftValues(
-            long earned,
-            long tripCount,
-            long duration,
-            long startedAt,
-            long finishedAt,
-            String note
-    ) {
+    private ContentValues createShiftValues(long earned, long tripCount, long duration, long startedAt, long finishedAt, String note) {
         ContentValues values = new ContentValues();
         values.put("earned", earned);
         values.put("trip_count", tripCount);
@@ -355,89 +230,42 @@ public final class DatabaseHelper extends SQLiteOpenHelper {
         values.put("started_at", Math.max(0L, startedAt));
         values.put("finished_at", Math.max(0L, finishedAt));
         values.put("note", note == null ? "" : note);
-
         return values;
     }
 
-    private long getShiftIdByKey(
-            SQLiteDatabase db,
-            String shiftKey
-    ) {
-        try (Cursor cursor = db.query(
-                TABLE_SHIFTS,
-                new String[]{"id"},
-                "shift_key = ?",
-                new String[]{shiftKey},
-                null,
-                null,
-                null,
-                "1"
-        )) {
-            return cursor.moveToFirst()
-                    ? cursor.getLong(0)
-                    : -1;
+    private long getShiftIdByKey(SQLiteDatabase db, String shiftKey) {
+        try (Cursor cursor = db.query(TABLE_SHIFTS, new String[]{"id"}, "shift_key = ?",
+                new String[]{shiftKey}, null, null, null, "1")) {
+            return cursor.moveToFirst() ? cursor.getLong(0) : -1;
         }
     }
 
     public synchronized Cursor getTrips() {
-        return getReadableDatabase().query(
-                TABLE_TRIPS,
-                null,
-                null,
-                null,
-                null,
-                null,
-                "created_at DESC, id DESC"
-        );
+        return getReadableDatabase().query(TABLE_TRIPS, null, null, null, null, null, "created_at DESC, id DESC");
     }
 
     public synchronized Cursor getShifts() {
-        return getReadableDatabase().query(
-                TABLE_SHIFTS,
-                null,
-                null,
-                null,
-                null,
-                null,
-                "finished_at DESC, id DESC"
-        );
+        return getReadableDatabase().query(TABLE_SHIFTS, null, null, null, null, null, "finished_at DESC, id DESC");
     }
 
-    public synchronized long getTripCount() {
-        return getCount(TABLE_TRIPS);
-    }
-
-    public synchronized long getShiftCount() {
-        return getCount(TABLE_SHIFTS);
-    }
+    public synchronized long getTripCount() { return getCount(TABLE_TRIPS); }
+    public synchronized long getShiftCount() { return getCount(TABLE_SHIFTS); }
 
     private long getCount(String table) {
-        try (Cursor cursor = getReadableDatabase().rawQuery(
-                "SELECT COUNT(*) FROM " + table, null)) {
+        try (Cursor cursor = getReadableDatabase().rawQuery("SELECT COUNT(*) FROM " + table, null)) {
             return cursor.moveToFirst() ? cursor.getLong(0) : 0;
         }
     }
 
     public synchronized long getLatestTripId() {
-        try (Cursor cursor = getReadableDatabase().rawQuery(
-                "SELECT id FROM " + TABLE_TRIPS +
-                        " ORDER BY id DESC LIMIT 1",
-                null
-        )) {
+        try (Cursor cursor = getReadableDatabase().rawQuery("SELECT id FROM " + TABLE_TRIPS + " ORDER BY id DESC LIMIT 1", null)) {
             return cursor.moveToFirst() ? cursor.getLong(0) : -1;
         }
     }
 
-    public synchronized void clearTrips() {
-        getWritableDatabase().delete(TABLE_TRIPS, null, null);
-    }
-
-    public synchronized void clearShifts() {
-        getWritableDatabase().delete(TABLE_SHIFTS, null, null);
-    }
+    public synchronized void clearTrips() { getWritableDatabase().delete(TABLE_TRIPS, null, null); }
+    public synchronized void clearShifts() { getWritableDatabase().delete(TABLE_SHIFTS, null, null); }
 
     @Override
-    public synchronized void close() {
-        super.close();
-    }
-                    }
+    public synchronized void close() { super.close(); }
+}
