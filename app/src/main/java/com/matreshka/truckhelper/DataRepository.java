@@ -1,3 +1,4 @@
+// Файл: DataRepository.java
 package com.matreshka.truckhelper;
 
 import android.content.Context;
@@ -147,11 +148,25 @@ public final class DataRepository {
                 .apply();
     }
 
-    // Сброс только текущей смены без изменения общего баланса,
-    // общего количества кругов и сохранённой истории.
+    // Сброс текущих показателей.
+    // Важно: этот метод обнуляет и общий баланс, и общее количество кругов,
+    // и общий заработок. НЕ использовать для сброса только текущей смены —
+    // для неё есть resetShift().
 
     public synchronized boolean resetCurrentStats() {
-        return prefs.resetCurrentStats();
+        SharedPreferences.Editor editor =
+                prefs.getPreferences().edit();
+
+        editor.putLong("balance", 0L);
+        editor.putLong("trips", 0L);
+        editor.putLong("seconds", 0L);
+        editor.putLong("shiftEarned", 0L);
+        editor.putLong("shiftTrips", 0L);
+        editor.putLong("shiftStartedAt", 0L);
+        editor.putLong("startAt", 0L);
+        editor.putBoolean("running", false);
+
+        return editor.commit();
     }
 
     // Универсальный доступ к настройкам
@@ -213,6 +228,16 @@ public final class DataRepository {
             String expectedSource
     ) {
         return database.deleteTrip(id, expectedSource);
+    }
+
+    /**
+     * Сброс всех кругов текущей смены (created_at >= shiftStartedAt).
+     * Удаляет и ручные рейсы, и круги с плавающей панели.
+     */
+    public synchronized DatabaseHelper.ResetResult resetShift(
+            long shiftStartedAt
+    ) {
+        return database.resetShift(shiftStartedAt);
     }
 
     public synchronized Cursor getTripsHistory() {
@@ -296,33 +321,6 @@ public final class DataRepository {
 
     public synchronized long getShiftsCount() {
         return database.getShiftCount();
-    }
-
-    // Сбросы отдельных показателей по календарным дням.
-
-    public synchronized boolean saveDailyMetricReset(
-            long dayStart,
-            String metric,
-            long resetAt
-    ) {
-        return database.saveDailyMetricReset(dayStart, metric, resetAt);
-    }
-
-    public synchronized long getDailyMetricReset(
-            long dayStart,
-            String metric
-    ) {
-        return database.getDailyMetricReset(dayStart, metric);
-    }
-
-    // Полное удаление пользовательских данных.
-    // База очищается транзакционно, затем очищаются настройки.
-
-    public synchronized boolean clearAllApplicationData() {
-        if (!database.clearAllData()) {
-            return false;
-        }
-        return prefs.clearAllPreferences();
     }
 
     // Последняя запись
