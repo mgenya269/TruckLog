@@ -123,10 +123,12 @@ public class FloatingPanelService extends Service {
         0xFFD08FB5, 0xFFD0A58F
     };
 
-    private int theme() {
-        return Math.max(0, Math.min(9, prefs.getInt("theme", 0)));
+    @Override
+    protected void attachBaseContext(Context base) {
+        super.attachBaseContext(LocaleHelper.onAttach(base));
     }
 
+    private int theme() { return Math.max(0, Math.min(9, prefs.getInt("theme", 0))); }
     private int accent() { return accents[theme()]; }
     private int background() { return backgrounds[theme()]; }
     private int cardColor() { return cards[theme()]; }
@@ -280,7 +282,7 @@ public class FloatingPanelService extends Service {
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= 26) {
             NotificationChannel ch = new NotificationChannel(
-                NOTIF_CHANNEL, "TruckLog панель", NotificationManager.IMPORTANCE_LOW
+                NOTIF_CHANNEL, "TruckLog", NotificationManager.IMPORTANCE_LOW
             );
             NotificationManager nm = (NotificationManager)getSystemService(NOTIFICATION_SERVICE);
             if (nm != null) nm.createNotificationChannel(ch);
@@ -366,7 +368,7 @@ public class FloatingPanelService extends Service {
         try {
             AlertDialog dialog = new AlertDialog.Builder(this)
                 .setTitle(title).setMessage(message)
-                .setPositiveButton("ОК", null).create();
+                .setPositiveButton(R.string.ok, null).create();
             Window window = dialog.getWindow();
             if (window != null) {
                 if (Build.VERSION.SDK_INT >= 26)
@@ -382,7 +384,7 @@ public class FloatingPanelService extends Service {
 
     private void showServiceInline(String message) {
         if (panel == null || inlineView == null) {
-            showServiceDialog("TruckLog", message);
+            showServiceDialog(getString(R.string.app_name), message);
             return;
         }
         inlineView.setText(message);
@@ -408,7 +410,7 @@ public class FloatingPanelService extends Service {
         }
 
         if (!repository.initialize()) {
-            showServiceDialog("История", "Ошибка переноса истории. Старые данные сохранены.");
+            showServiceDialog(getString(R.string.history_title), getString(R.string.history_deleted_error));
         }
 
         listener = (preferences, key) -> {
@@ -470,7 +472,7 @@ public class FloatingPanelService extends Service {
     private void limitPanelPosition() {
         if (panelLp == null) return;
         int width = panelLp.width;
-        if (width <= 0) width = scaledDp(300);
+        if (width <= 0) width = scaledDp(320);
         int height = 0;
         if (panel != null) height = panel.getHeight();
         if (height <= 0) height = dp(380);
@@ -491,7 +493,6 @@ public class FloatingPanelService extends Service {
         tabLp.x = prefs.getInt(KEY_TAB_X, 0);
         tabLp.y = prefs.getInt(KEY_TAB_Y, dp(180));
         limitTabPosition();
-
         wm.addView(tab, tabLp);
 
         tab.setOnTouchListener((v, event) -> {
@@ -560,7 +561,7 @@ public class FloatingPanelService extends Service {
 
     private void refreshPanelSizeAndPosition() {
         if (panel == null || panelLp == null) return;
-        panelLp.width = scaledDp(300);
+        panelLp.width = scaledDp(320);
         limitPanelPosition();
         try { wm.updateViewLayout(panel, panelLp); } catch (Exception ignored) {}
         applyPanelOpacity(panel);
@@ -633,15 +634,14 @@ public class FloatingPanelService extends Service {
             root.setPadding(scaledDp(16), scaledDp(16), scaledDp(16), scaledDp(16));
             root.setBackground(shape(background(), 22));
 
-            // Шапка
             LinearLayout head = new LinearLayout(this);
             head.setGravity(Gravity.CENTER_VERTICAL);
 
             LinearLayout headTitles = new LinearLayout(this);
             headTitles.setOrientation(1);
-            panelTitle = txt("TRUCKLOG", 15, fg(), true);
+            panelTitle = txt(getString(R.string.fp_title), 15, fg(), true);
             headTitles.addView(panelTitle);
-            headTitles.addView(txt("Панель управления", 10, muted(), false));
+            headTitles.addView(txt(getString(R.string.fp_subtitle), 10, muted(), false));
             head.addView(headTitles, new LinearLayout.LayoutParams(0, -2, 1));
 
             dragButton = btn("☰", cardColor());
@@ -656,13 +656,11 @@ public class FloatingPanelService extends Service {
 
             root.addView(head);
 
-            // Инлайн
             inlineView = txt("", 12, accent(), true);
             inlineView.setVisibility(View.GONE);
             inlineView.setPadding(0, scaledDp(8), 0, 0);
             root.addView(inlineView);
 
-            // Большой заработок
             LinearLayout hero = new LinearLayout(this);
             hero.setOrientation(1);
             hero.setPadding(scaledDp(14), scaledDp(14), scaledDp(14), scaledDp(14));
@@ -671,7 +669,7 @@ public class FloatingPanelService extends Service {
             heroParams.topMargin = scaledDp(14);
             root.addView(hero, heroParams);
 
-            hero.addView(txt("ЗАРАБОТОК ЗА СМЕНУ", 11, muted(), true));
+            hero.addView(txt(getString(R.string.fp_shift_earned), 11, muted(), true));
             earnings = txt("", 26, accent(), true);
             LinearLayout.LayoutParams eParams = new LinearLayout.LayoutParams(-1, -2);
             eParams.topMargin = scaledDp(4);
@@ -694,22 +692,19 @@ public class FloatingPanelService extends Service {
             barParams.topMargin = scaledDp(8);
             hero.addView(progressBar, barParams);
 
-            // Главная кнопка
             round = btn("", accent());
             LinearLayout.LayoutParams roundParams = new LinearLayout.LayoutParams(-1, scaledDp(56));
             roundParams.topMargin = scaledDp(14);
             root.addView(round, roundParams);
             round.setOnClickListener(v -> addRound());
 
-            // Отмена
-            undoButton = btnOutline("ОТМЕНИТЬ ПОСЛЕДНИЙ КРУГ", accent());
+            undoButton = btnOutline(getString(R.string.fp_undo_round), accent());
             LinearLayout.LayoutParams undoParams = new LinearLayout.LayoutParams(-1, scaledDp(46));
             undoParams.topMargin = scaledDp(8);
             root.addView(undoButton, undoParams);
             undoButton.setOnClickListener(v -> undoRound());
 
-            // Настройки
-            settingsButton = btn("ВЫПЛАТА И ЦЕЛЬ", cardColor());
+            settingsButton = btn(getString(R.string.fp_settings), cardColor());
             LinearLayout.LayoutParams settingsParams = new LinearLayout.LayoutParams(-1, scaledDp(44));
             settingsParams.topMargin = scaledDp(8);
             root.addView(settingsButton, settingsParams);
@@ -719,7 +714,7 @@ public class FloatingPanelService extends Service {
             settingsBox.setVisibility(View.GONE);
             settingsBox.setPadding(0, scaledDp(10), 0, 0);
 
-            settingsBox.addView(txt("Выплата за круг", 12, muted(), true));
+            settingsBox.addView(txt(getString(R.string.fp_pay_label), 12, muted(), true));
             payInput = new EditText(this);
             payInput.setSingleLine(true);
             payInput.setInputType(2);
@@ -727,7 +722,7 @@ public class FloatingPanelService extends Service {
             payInput.setText(String.valueOf(prefs.getInt("pay", 15000)));
             settingsBox.addView(payInput);
 
-            settingsBox.addView(txt("Цель накоплений", 12, muted(), true));
+            settingsBox.addView(txt(getString(R.string.fp_goal_label), 12, muted(), true));
             goalInput = new EditText(this);
             goalInput.setSingleLine(true);
             goalInput.setInputType(2);
@@ -735,9 +730,9 @@ public class FloatingPanelService extends Service {
             goalInput.setText(String.valueOf(prefs.getLong("goal", 5000000)));
             settingsBox.addView(goalInput);
 
-            saveButton = btn("СОХРАНИТЬ", accent());
+            saveButton = btn(getString(R.string.save), accent());
             settingsBox.addView(saveButton);
-            cancelButton = btn("ОТМЕНА", cardColor());
+            cancelButton = btn(getString(R.string.cancel), cardColor());
             settingsBox.addView(cancelButton);
 
             root.addView(settingsBox);
@@ -770,7 +765,7 @@ public class FloatingPanelService extends Service {
                     refreshStats();
                 } catch (Exception e) {
                     feedbackError();
-                    showServiceInline("Введи корректные числа");
+                    showServiceInline(getString(R.string.fp_enter_numbers));
                 }
             });
 
@@ -781,8 +776,7 @@ public class FloatingPanelService extends Service {
                 setFocusable(false);
             });
 
-            // Сброс
-            resetButton = btnOutline("СБРОСИТЬ БАЛАНС И КРУГИ", 0xFFB84040);
+            resetButton = btnOutline(getString(R.string.fp_reset_stats), 0xFFB84040);
             LinearLayout.LayoutParams resetParams = new LinearLayout.LayoutParams(-1, scaledDp(44));
             resetParams.topMargin = scaledDp(8);
             root.addView(resetButton, resetParams);
@@ -809,7 +803,7 @@ public class FloatingPanelService extends Service {
         } catch (Exception e) {
             removePanel();
             expanded = false;
-            showServiceDialog("Панель", "Не удалось открыть плавающую панель.");
+            showServiceDialog(getString(R.string.floating_panel), getString(R.string.fp_reset_failed));
         }
     }
 
@@ -818,10 +812,10 @@ public class FloatingPanelService extends Service {
     private void showResetDialog() {
         try {
             AlertDialog dialog = new AlertDialog.Builder(this)
-                .setTitle("Сбросить баланс и круги?")
-                .setMessage("Будут обнулены только текущий баланс, количество кругов, заработок и таймер смены. История и графики останутся.")
-                .setNegativeButton("Отмена", null)
-                .setPositiveButton("Сбросить", (d, which) -> resetStats())
+                .setTitle(R.string.fp_reset_confirm_title)
+                .setMessage(R.string.fp_reset_confirm_msg)
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton(R.string.reset, (d, which) -> resetStats())
                 .create();
 
             Window window = dialog.getWindow();
@@ -834,7 +828,7 @@ public class FloatingPanelService extends Service {
             dialog.show();
             styleDialog(dialog);
         } catch (Exception e) {
-            showServiceInline("Не удалось открыть окно сброса");
+            showServiceInline(getString(R.string.fp_reset_dialog_fail));
         }
     }
 
@@ -875,13 +869,13 @@ public class FloatingPanelService extends Service {
                 if (resetButton != null) resetButton.setEnabled(true);
                 if (!ok) {
                     feedbackError();
-                    showServiceDialog("Сброс не выполнен", "Не удалось сохранить изменения. Попробуй ещё раз.");
+                    showServiceDialog(getString(R.string.fp_error), getString(R.string.fp_reset_failed));
                     refreshStats();
                     return;
                 }
                 feedbackUndo();
                 refreshStats();
-                showServiceInline("Баланс и круги сброшены. История сохранена.");
+                showServiceInline(getString(R.string.fp_shift_reset));
             });
         }).start();
     }
@@ -891,7 +885,7 @@ public class FloatingPanelService extends Service {
     private void addRound() {
         if (!isShiftStarted()) {
             feedbackError();
-            showServiceInline("Сначала начни смену в приложении");
+            showServiceInline(getString(R.string.fp_start_shift_first));
             return;
         }
         if (busy) return;
@@ -912,12 +906,12 @@ public class FloatingPanelService extends Service {
 
                 if (pay <= 0 || !canAdd(balance, pay) || !canAdd(earned, pay) ||
                     trips < 0 || trips == Long.MAX_VALUE || shiftTrips < 0 || shiftTrips == Long.MAX_VALUE) {
-                    error = "Невозможно добавить круг";
+                    error = getString(R.string.fp_cannot_add);
                 } else {
                     long now = System.currentTimeMillis();
                     long recordId = repository.addTrip(pay, now, 0, "", "", "floating_panel");
                     if (recordId <= 0) {
-                        error = "Не удалось сохранить круг";
+                        error = getString(R.string.fp_cannot_save_round);
                     } else {
                         long shiftStartedAt = prefs.getLong(KEY_SHIFT_STARTED, 0);
                         if (shiftStartedAt <= 0) shiftStartedAt = now;
@@ -933,12 +927,12 @@ public class FloatingPanelService extends Service {
                         if (editor.commit()) ok = true;
                         else {
                             repository.deleteTrip(recordId, "floating_panel");
-                            error = "Не удалось сохранить круг. Попробуй ещё раз.";
+                            error = getString(R.string.fp_cannot_save_round);
                         }
                     }
                 }
             } catch (Exception e) {
-                error = "Ошибка при сохранении круга";
+                error = getString(R.string.fp_error);
             }
 
             final boolean success = ok;
@@ -952,7 +946,7 @@ public class FloatingPanelService extends Service {
                     feedbackAdd();
                     refreshStats();
                     if (prefs.getBoolean("trip_finish_notifications", true)) {
-                        notifyPanel(NOTIF_ROUND, "Круг добавлен", "+" + money(finalPay) + " ₽");
+                        notifyPanel(NOTIF_ROUND, getString(R.string.fp_round_added), "+" + money(finalPay) + " ₽");
                     }
                 } else {
                     feedbackError();
@@ -987,10 +981,10 @@ public class FloatingPanelService extends Service {
 
                     if (record.amount <= 0 || balance < record.amount || trips <= 0 ||
                         earned < record.amount || shiftTrips <= 0) {
-                        error = "Не удалось безопасно отменить круг";
+                        error = getString(R.string.fp_cannot_undo);
                     } else {
                         boolean deleted = repository.deleteTrip(record.id, "floating_panel");
-                        if (!deleted) error = "Запись круга не найдена";
+                        if (!deleted) error = getString(R.string.fp_undo_not_found);
                         else {
                             current.remove(current.size() - 1);
                             long newBalance = balance - record.amount;
@@ -1006,12 +1000,12 @@ public class FloatingPanelService extends Service {
                             if (newEarned == 0 && newShiftTrips == 0)
                                 editor.putLong(KEY_SHIFT_STARTED, 0);
                             if (editor.commit()) ok = true;
-                            else error = "Запись удалена, но счётчики не удалось сохранить";
+                            else error = getString(R.string.fp_undo_counters_error);
                         }
                     }
                 }
             } catch (Exception e) {
-                error = "Ошибка при отмене круга";
+                error = getString(R.string.fp_error);
             }
 
             final boolean success = ok;
@@ -1025,7 +1019,7 @@ public class FloatingPanelService extends Service {
                     feedbackUndo();
                     refreshStats();
                     if (prefs.getBoolean("trip_finish_notifications", true)) {
-                        notifyPanel(NOTIF_UNDO, "Круг отменён", "-" + money(finalAmount) + " ₽");
+                        notifyPanel(NOTIF_UNDO, getString(R.string.fp_round_undone), "-" + money(finalAmount) + " ₽");
                     }
                 } else {
                     if (errMsg != null) { feedbackError(); showServiceInline(errMsg); }
@@ -1047,12 +1041,12 @@ public class FloatingPanelService extends Service {
 
         if (earnings != null) earnings.setText(money(earned) + " ₽");
         if (count != null) {
-            count.setText("Кругов: " + shiftTrips + "\nБаланс: " + money(balance) + " ₽");
+            count.setText(getString(R.string.fp_rounds_balance, (int) shiftTrips, money(balance)));
         }
 
         boolean started = isShiftStarted();
         if (round != null) {
-            round.setText(started ? "СДЕЛАЛ КРУГ  +" + money(pay) + " ₽" : "СНАЧАЛА НАЧНИ СМЕНУ");
+            round.setText(started ? getString(R.string.fp_make_round, money(pay)) : getString(R.string.fp_start_shift));
             round.setEnabled(started && !busy);
             round.setAlpha(started ? 1f : 0.5f);
         }
@@ -1060,7 +1054,7 @@ public class FloatingPanelService extends Service {
         if (progressText != null && progressBar != null) {
             double percent = goal > 0 ? balance * 100.0 / goal : 0;
             progressBar.setProgress((int)Math.min(100, Math.max(0, percent)));
-            progressText.setText("До цели: " + money(Math.max(0, goal - balance)) + " ₽");
+            progressText.setText(getString(R.string.fp_until_goal, money(Math.max(0, goal - balance))));
         }
 
         if (undoButton != null) {
@@ -1148,4 +1142,4 @@ public class FloatingPanelService extends Service {
     public IBinder onBind(Intent intent) {
         return null;
     }
-            }
+                              }
