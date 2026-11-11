@@ -1340,8 +1340,6 @@ public class FloatingPanelService extends Service {
                             if (editor.commit()) {
                                 ok = true;
                             } else {
-                                // Откатываем состояние стека,
-                                // запись уже удалена — повторно не восстановить.
                                 error = "Запись удалена, но счётчики " +
                                         "не удалось сохранить";
                             }
@@ -1354,6 +1352,7 @@ public class FloatingPanelService extends Service {
 
             final boolean success = ok;
             final String errMsg = error;
+            final long finalAmount = amount;
 
             mainHandler.post(() -> {
                 busy = false;
@@ -1368,7 +1367,7 @@ public class FloatingPanelService extends Service {
                         notifyPanel(
                             NOTIF_UNDO,
                             "Круг отменён",
-                            "-" + money(amount) + " ₽"
+                            "-" + money(finalAmount) + " ₽"
                         );
                     }
                 } else {
