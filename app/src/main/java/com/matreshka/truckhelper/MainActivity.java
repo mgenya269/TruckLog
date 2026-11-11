@@ -1051,22 +1051,18 @@ public class MainActivity extends Activity {
         showThemedDialog(dialog);
     }
 
-    // ---------------- ИСТОРИЯ С ЖУРНАЛОМ СМЕНЫ ----------------
-
     private void showHistory() {
         heading("История", "Смена, круги и время");
 
         long startedAt = prefs.getLong("last_shift_started_at", 0);
         long finishedAt = prefs.getLong("last_shift_finished_at", 0);
 
-        // Смена начата
         if (startedAt > 0) {
             LinearLayout startCard = card();
             startCard.addView(text("Смена начата", 16, accent(), true));
             startCard.addView(text(formatDateTime(startedAt), 14, fg(), false));
         }
 
-        // Круги + карточка по дням
         Cursor cursor = null;
         HashMap<String, Long> byDayCount = new HashMap<>();
         HashMap<String, Long> byDayAmount = new HashMap<>();
@@ -1142,7 +1138,6 @@ public class MainActivity extends Activity {
             if (cursor != null) cursor.close();
         }
 
-        // Закончил смену
         if (finishedAt > 0) {
             LinearLayout endCard = card();
             endCard.addView(text("Закончил смену", 16, 0xFFEF9A9A, true));
@@ -1465,14 +1460,20 @@ public class MainActivity extends Activity {
         }
     }
 
+    // ---------------- ЕЩЁ (настройки) — ОФОРМЛЕНИЕ ОТДЕЛЬНОЙ КАРТОЧКОЙ ----------------
+
     private void showSettings() {
         heading("Ещё", "Настройки и оформление");
 
-        LinearLayout quick = card();
-        quick.addView(text("ПЕРЕЙТИ", 12, muted(), true));
-        Button toThemes = button("🎨  Оформление", cardColor());
-        quick.addView(toThemes, new LinearLayout.LayoutParams(-1, dp(46)));
-        toThemes.setOnClickListener(v -> { page = "theme"; rebuildBottomNav(); renderPage(); });
+        // ОФОРМЛЕНИЕ — отдельной карточкой сверху
+        LinearLayout themeCard = card();
+        themeCard.addView(text("ОФОРМЛЕНИЕ", 12, muted(), true));
+        themeCard.addView(text("Выбери цветовую тему приложения", 13, muted(), false));
+        Button openThemes = button("ВЫБРАТЬ ТЕМУ", accent());
+        LinearLayout.LayoutParams tp = new LinearLayout.LayoutParams(-1, dp(48));
+        tp.topMargin = dp(8);
+        themeCard.addView(openThemes, tp);
+        openThemes.setOnClickListener(v -> { page = "theme"; rebuildBottomNav(); renderPage(); });
 
         LinearLayout sound = card();
         sound.addView(text("ЗВУК И ВИБРАЦИЯ", 12, muted(), true));
@@ -1733,4 +1734,4 @@ public class MainActivity extends Activity {
         }
         super.onDestroy();
     }
-                          }
+            }
