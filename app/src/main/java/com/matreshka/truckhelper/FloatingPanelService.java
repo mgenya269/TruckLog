@@ -189,7 +189,7 @@ public class FloatingPanelService extends Service {
             first <= Long.MAX_VALUE - second;
     }
 
-    // ---------------- ЗВУКИ И ВИБРАЦИЯ (П.9) ----------------
+    // ---------------- ЗВУКИ И ВИБРАЦИЯ ----------------
 
     private void feedbackAdd() {
         playTone(ToneGenerator.TONE_PROP_BEEP2, 90);
@@ -270,7 +270,7 @@ public class FloatingPanelService extends Service {
         }
     }
 
-    // ---------------- УВЕДОМЛЕНИЯ (П.8) ----------------
+    // ---------------- УВЕДОМЛЕНИЯ ----------------
 
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= 26) {
@@ -351,7 +351,7 @@ public class FloatingPanelService extends Service {
         return builder.toString();
     }
 
-    // ---------------- УВЕДОМЛЕНИЯ В ПАНЕЛИ ----------------
+    // ---------------- ДИАЛОГИ ----------------
 
     private void styleDialog(AlertDialog dialog) {
         if (dialog == null) return;
@@ -979,7 +979,7 @@ public class FloatingPanelService extends Service {
                 setFocusable(false);
             });
 
-            resetButton = btn("СБРОСИТЬ СТАТИСТИКУ", 0xFFB84040);
+            resetButton = btn("СБРОСИТЬ БАЛАНС И КРУГИ", 0xFFB84040);
 
             LinearLayout.LayoutParams resetParams =
                 new LinearLayout.LayoutParams(-1, scaledDp(42));
@@ -1023,17 +1023,17 @@ public class FloatingPanelService extends Service {
         }
     }
 
-    // ---------------- СБРОС ТЕКУЩЕЙ СМЕНЫ (П.2) ----------------
+    // ---------------- СБРОС ТЕКУЩЕГО БАЛАНСА И КРУГОВ ----------------
 
     private void showResetDialog() {
         try {
             AlertDialog dialog = new AlertDialog.Builder(this)
-                .setTitle("Сбросить статистику?")
+                .setTitle("Сбросить текущий баланс и круги?")
                 .setMessage(
-                    "Круги текущей смены будут удалены из истории " +
-                    "(и ручные, и с панели), а их заработок вычтен " +
-                    "из общего баланса. Предыдущие дни и завершённые " +
-                    "смены останутся."
+                    "Будут обнулены только текущий баланс, количество " +
+                    "кругов, заработок и таймер текущей смены. " +
+                    "История рейсов, графики и общая статистика " +
+                    "останутся без изменений."
                 )
                 .setNegativeButton("Отмена", null)
                 .setPositiveButton(
@@ -1064,9 +1064,19 @@ public class FloatingPanelService extends Service {
     }
 
     /**
-     * Универсальный сброс текущей смены (П.2):
-     * удаляет все круги смены из SQLite (ручные + панель),
-     * вычитает из баланса и количества кругов.
+     * Простой сброс текущих показателей (П.2):
+     * - balance = 0
+     * - trips = 0
+     * - shiftEarned = 0
+     * - shiftTrips = 0
+     * - seconds = 0
+     * - shiftStartedAt = 0
+     * - startAt = 0
+     * - running = false
+     * - panel_undo_stack очищается
+     *
+     * История рейсов в SQLite НЕ трогается —
+     * графики и общая статистика остаются.
      */
     public static boolean resetCurrentShift(Context context) {
         if (context == null) return false;
@@ -1075,49 +1085,14 @@ public class FloatingPanelService extends Service {
         SharedPreferences preferences = app.getSharedPreferences(
             "truck_stats", Context.MODE_PRIVATE
         );
-        DataRepository repo = DataRepository.getInstance(app);
-
-        long shiftStartedAt = preferences.getLong(KEY_SHIFT_STARTED, 0L);
-
-        if (shiftStartedAt <= 0) {
-            shiftStartedAt = System.currentTimeMillis();
-        }
 
         try {
-            DatabaseHelper.ResetResult result =
-                repo.resetShift(shiftStartedAt);
-
-            long amount = result != null ? result.amount : 0L;
-            long count = result != null ? result.count : 0L;
-
-            long balance = Math.max(0L, preferences.getLong("balance", 0L));
-            long trips = Math.max(0L, preferences.getLong("trips", 0L));
-            long shiftEarned = Math.max(
-                0L, preferences.getLong("shiftEarned", 0L)
-            );
-            long shiftTrips = Math.max(
-                0L, preferences.getLong("shiftTrips", 0L)
-            );
-
-            long newBalance = Math.max(
-                0L, balance - Math.min(balance, amount)
-            );
-            long newTrips = Math.max(
-                0L, trips - Math.min(trips, count)
-            );
-            long newShiftEarned = Math.max(
-                0L, shiftEarned - Math.min(shiftEarned, amount)
-            );
-            long newShiftTrips = Math.max(
-                0L, shiftTrips - Math.min(shiftTrips, count)
-            );
-
             return preferences.edit()
-                .putLong("balance", newBalance)
-                .putLong("trips", newTrips)
+                .putLong("balance", 0L)
+                .putLong("trips", 0L)
+                .putLong("shiftEarned", 0L)
+                .putLong("shiftTrips", 0L)
                 .putLong("seconds", 0L)
-                .putLong("shiftEarned", newShiftEarned)
-                .putLong("shiftTrips", newShiftTrips)
                 .putLong(KEY_SHIFT_STARTED, 0L)
                 .putLong("startAt", 0L)
                 .putBoolean("running", false)
@@ -1152,8 +1127,7 @@ public class FloatingPanelService extends Service {
                     feedbackError();
                     showServiceDialog(
                         "Сброс не выполнен",
-                        "Не удалось сохранить изменения статистики. " +
-                        "Проверь данные перед повторным сбросом."
+                        "Не удалось сохранить изменения. Попробуй ещё раз."
                     );
                     refreshStats();
                     return;
@@ -1162,13 +1136,13 @@ public class FloatingPanelService extends Service {
                 feedbackUndo();
                 refreshStats();
                 showServiceInline(
-                    "Смена сброшена. Баланс и история обновлены."
+                    "Баланс и круги сброшены. История сохранена."
                 );
             });
         }).start();
     }
 
-    // ---------------- ДОБАВЛЕНИЕ КРУГА (П.1) ----------------
+    // ---------------- ДОБАВЛЕНИЕ КРУГА ----------------
 
     private void addRound() {
         if (busy) return;
@@ -1267,7 +1241,7 @@ public class FloatingPanelService extends Service {
         }).start();
     }
 
-    // ---------------- ОТМЕНА КРУГА (П.1) ----------------
+    // ---------------- ОТМЕНА КРУГА ----------------
 
     private void undoRound() {
         if (busy) return;
@@ -1433,7 +1407,7 @@ public class FloatingPanelService extends Service {
         }
     }
 
-    // ---------------- СМЕНА ТЕМЫ (П.10) ----------------
+    // ---------------- СМЕНА ТЕМЫ ----------------
 
     private void refreshTheme() {
         int currentAccent = accent();
@@ -1596,4 +1570,4 @@ public class FloatingPanelService extends Service {
     public IBinder onBind(Intent intent) {
         return null;
     }
-            }
+                        }
