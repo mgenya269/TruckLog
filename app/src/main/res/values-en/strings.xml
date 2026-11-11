@@ -37,6 +37,24 @@
     <string name="shift_finished_title">Shift finished!</string>
     <string name="shift_finished_msg">Earnings: %1$s ₽\nRounds: %2$d\nTime: %3$s</string>
 
+    <string name="sun">Вс</string>
+<string name="mon">Пн</string>
+<string name="tue">Вт</string>
+<string name="wed">Ср</string>
+<string name="thu">Чт</string>
+<string name="fri">Пт</string>
+<string name="sat">Сб</string>
+<string name="theme_neon">Неон</string>
+<string name="theme_indigo">Индиго</string>
+<string name="theme_cyan">Циан</string>
+<string name="theme_red">Красная</string>
+<string name="theme_green">Зелёная</string>
+<string name="theme_gold">Золото</string>
+<string name="theme_blue">Синяя</string>
+<string name="theme_teal">Бирюза</string>
+<string name="theme_pink">Розовая</string>
+<string name="theme_orange">Оранж</string>
+    
     <string name="stats_title">Statistics</string>
     <string name="stats_subtitle">Results and personal records</string>
     <string name="today">TODAY</string>
