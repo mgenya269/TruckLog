@@ -302,7 +302,7 @@ public class MainActivity extends Activity {
 
         LinearLayout labels = new LinearLayout(this);
         labels.setOrientation(1);
-        labels.addView(text(getString(R.string.app_name).toUpperCase(), 22, fg(), true));
+        labels.addView(text("TruckLog", 22, fg(), true));
         labels.addView(text(getString(R.string.app_subtitle), 12, muted(), false));
         header.addView(labels, new LinearLayout.LayoutParams(0, -2, 1));
 
@@ -1574,6 +1574,14 @@ public class MainActivity extends Activity {
         resetButton.setTextColor(0xFFEF9A9A);
         reset.addView(resetButton, new LinearLayout.LayoutParams(-1, dp(46)));
         resetButton.setOnClickListener(v -> confirmSettingsReset());
+
+        // Подпись разработчика Yudzhen
+        TextView author = text("Yudzhen", 11, muted(), false);
+        author.setGravity(Gravity.END);
+        LinearLayout.LayoutParams ap = new LinearLayout.LayoutParams(-1, -2);
+        ap.topMargin = dp(24);
+        ap.bottomMargin = dp(16);
+        content.addView(author, ap);
     }
 
     private String currentLanguageLabel() {
@@ -1818,4 +1826,4 @@ public class MainActivity extends Activity {
         }
         super.onDestroy();
     }
-                              }
+                }
