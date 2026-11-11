@@ -238,6 +238,20 @@ public class MainActivity extends Activity {
         return calendar.getTimeInMillis();
     }
 
+    /**
+     * Смена считается начатой, если:
+     * - идёт рейс (running), ИЛИ
+     * - shiftStartedAt > 0, ИЛИ
+     * - уже есть круги/заработок в текущей смене.
+     */
+    private boolean isShiftStarted() {
+        if (running) return true;
+        if (prefs.getLong("shiftStartedAt", 0L) > 0L) return true;
+        if (prefs.getLong("shiftTrips", 0L) > 0L) return true;
+        if (prefs.getLong("shiftEarned", 0L) > 0L) return true;
+        return false;
+    }
+
     // ---------------- УВЕДОМЛЕНИЯ ----------------
 
     private void createNotificationChannel() {
@@ -572,7 +586,6 @@ public class MainActivity extends Activity {
         shiftParams.topMargin = dp(12);
         content.addView(finishShift, shiftParams);
 
-        // П.1: завершать смену можно всегда, даже без кругов
         finishShift.setEnabled(true);
         finishShift.setOnClickListener(v -> confirmFinishShift());
 
@@ -651,9 +664,6 @@ public class MainActivity extends Activity {
         }
     }
 
-    /**
-     * П.1: завершать смену можно даже без кругов.
-     */
     private void confirmFinishShift() {
         long earned = Math.max(0L, read("shiftEarned"));
         long shiftTrips = Math.max(0L, read("shiftTrips"));
@@ -679,9 +689,6 @@ public class MainActivity extends Activity {
         showThemedDialog(finishShiftDialog);
     }
 
-    /**
-     * П.1: сохраняем смену даже без кругов.
-     */
     private void finishShift() {
         long earned = Math.max(0L, read("shiftEarned"));
         long shiftTrips = Math.max(0L, read("shiftTrips"));
@@ -864,6 +871,79 @@ public class MainActivity extends Activity {
             handler.postDelayed(this, 1000);
         }
     };
+
+    // В этой версии finishTrip() не вызывается из UI (кнопка убрана),
+    // но оставлен для совместимости.
+    private void finishTrip() {
+        if (!isShiftStarted()) {
+            showInline("Сначала начни смену (Начать рейс)");
+            return;
+        }
+
+        if (!running) return;
+
+        long elapsed = Math.max(
+            1L,
+            (System.currentTimeMillis() - startAt) / 1000
+        );
+
+        long amount = pay();
+        long shiftEarned = read("shiftEarned");
+        long shiftTrips = read("shiftTrips");
+
+        if (balance > Long.MAX_VALUE - amount ||
+            trips == Long.MAX_VALUE ||
+            seconds > Long.MAX_VALUE - elapsed ||
+            shiftEarned > Long.MAX_VALUE - amount ||
+            shiftTrips == Long.MAX_VALUE) {
+            infoDialog("Предел счётчика", "Достигнут предел счётчика.");
+            return;
+        }
+
+        long finishTime = System.currentTimeMillis();
+        long shiftStartedAt = prefs.getLong("shiftStartedAt", 0);
+
+        if (shiftStartedAt <= 0) shiftStartedAt = startAt;
+
+        long recordId = repository.addTrip(
+            amount, finishTime, elapsed, "", "", "manual"
+        );
+
+        if (recordId <= 0) {
+            infoDialog(
+                "Рейс не сохранён",
+                "Не удалось сохранить рейс. Статистика не изменена."
+            );
+            return;
+        }
+
+        balance += amount;
+        trips++;
+        seconds += elapsed;
+
+        prefs.edit()
+            .putLong("balance", balance)
+            .putLong("trips", trips)
+            .putLong("seconds", seconds)
+            .putLong("shiftEarned", shiftEarned + amount)
+            .putLong("shiftTrips", shiftTrips + 1)
+            .putLong("shiftStartedAt", shiftStartedAt)
+            .putBoolean("running", false)
+            .putLong("startAt", 0)
+            .apply();
+
+        running = false;
+        startAt = 0;
+
+        handler.removeCallbacks(ticker);
+        renderPage();
+
+        infoDialog(
+            "Рейс завершён",
+            "+" + money(amount) + " ₽\nВремя: " +
+            formatTime(elapsed)
+        );
+    }
 
     private void showStats() {
         heading("Статистика", "Твои результаты и личные рекорды");
@@ -1276,12 +1356,6 @@ public class MainActivity extends Activity {
         showThemedDialog(dialog);
     }
 
-    /**
-     * П.2: История кругов с «папкой» по дням.
-     * Внутри — список дней: дата (дд.мм.гггг), сумма и кругов.
-     * Без дня недели. Сортировка — новые сверху.
-     * Данные синхронизированы с графиком и статистикой (общий источник — SQLite).
-     */
     private void showHistory() {
         heading("История кругов", "Сохранённые записи рейсов");
 
@@ -1345,7 +1419,6 @@ public class MainActivity extends Activity {
             final HashMap<String, Long> dayCounts = byDayCount;
             final HashMap<String, Long> dayAmounts = byDayAmount;
 
-            // «Папка» — История по дням
             LinearLayout folderCard = card();
             folderCard.addView(text(
                 "ИСТОРИЯ ПО ДНЯМ", 15, fg(), true
@@ -1444,10 +1517,6 @@ public class MainActivity extends Activity {
         }
     }
 
-    /**
-     * П.2: разбивка по дням — дата (дд.мм.гггг), сумма и количество кругов.
-     * Без дня недели. Сортировка — новые сверху.
-     */
     private void showDaysBreakdown(
         HashMap<String, Long> counts,
         HashMap<String, Long> amounts
@@ -2471,4 +2540,4 @@ public class MainActivity extends Activity {
 
         super.onDestroy();
     }
-                                       }
+                                }
