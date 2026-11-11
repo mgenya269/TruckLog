@@ -31,8 +31,9 @@ public class MainActivity extends Activity {
 
     private LinearLayout root, content;
     private FrameLayout frame;
-    private LinearLayout drawer;
+    private LinearLayout bottomNav;
     private String page = "home";
+    private String morePage = "settings";
 
     private TextView timerView;
     private TextView inlineMessage;
@@ -56,33 +57,33 @@ public class MainActivity extends Activity {
     };
 
     private final int[] accents = {
-        0xFF8B4DEB, 0xFF475569, 0xFF999999, 0xFFEF4444,
-        0xFF22C55E, 0xFFEAB308, 0xFF3B82F6, 0xFF06B6D4,
+        0xFF8B4DEB, 0xFF6366F1, 0xFF06B6D4, 0xFFEF4444,
+        0xFF22C55E, 0xFFEAB308, 0xFF3B82F6, 0xFF14B8A6,
         0xFFEC4899, 0xFFF97316
     };
 
     private final int[] backgrounds = {
-        0xFF100D1C, 0xFFF1F5F9, 0xFF080808, 0xFF190B10,
-        0xFF0B2115, 0xFF211C0A, 0xFF0C1830, 0xFF09232B,
-        0xFF2A1022, 0xFF2A170C
+        0xFF0E0B17, 0xFF0F172A, 0xFF060709, 0xFF160A0F,
+        0xFF08140D, 0xFF14110A, 0xFF081326, 0xFF06202A,
+        0xFF1B0A15, 0xFF1B0E06
     };
 
     private final int[] cards = {
-        0xFF211735, 0xFFE2E8F0, 0xFF1B1B1B, 0xFF2A151C,
-        0xFF142D20, 0xFF30280E, 0xFF172849, 0xFF12313A,
-        0xFF3A1830, 0xFF3A2113
+        0xFF1A1428, 0xFF1E293B, 0xFF111214, 0xFF24121A,
+        0xFF0F2318, 0xFF241F0F, 0xFF11213D, 0xFF0D2F3C,
+        0xFF2B1023, 0xFF2B180C
     };
 
     private final int[] foregrounds = {
-        Color.WHITE, 0xFF172033, Color.WHITE, Color.WHITE,
+        Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE,
         Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE,
         Color.WHITE, Color.WHITE
     };
 
     private final int[] mutedColors = {
-        0xFFC6A5E8, 0xFF64748B, 0xFFAAAAAA, 0xFFE6AAB7,
-        0xFFA5D6B4, 0xFFE7D69A, 0xFFA9C5F5, 0xFF9BDCE8,
-        0xFFF0B1D5, 0xFFE9B99A
+        0xFF9A8FB5, 0xFF94A3B8, 0xFF7A7D85, 0xFFB08A96,
+        0xFF8FB5A0, 0xFFB5A78F, 0xFF8FA8D0, 0xFF8FC4D0,
+        0xFFD08FB5, 0xFFD0A58F
     };
 
     private int theme() {
@@ -127,6 +128,14 @@ public class MainActivity extends Activity {
         return d;
     }
 
+    private GradientDrawable outline(int color, int radius, int strokeColor) {
+        GradientDrawable d = new GradientDrawable();
+        d.setColor(color);
+        d.setCornerRadius(dp(radius));
+        d.setStroke(dp(1.2f), strokeColor);
+        return d;
+    }
+
     private TextView text(String s, int size, int color, boolean bold) {
         TextView t = new TextView(this);
         t.setText(s);
@@ -159,47 +168,27 @@ public class MainActivity extends Activity {
 
     private void showThemedDialog(AlertDialog dialog) {
         if (dialog == null) return;
-
         dialog.show();
-
         Window window = dialog.getWindow();
-        if (window != null) {
-            window.setBackgroundDrawable(shape(cardColor(), 18));
-        }
-
-        int titleId = getResources().getIdentifier(
-            "alertTitle", "id", "android"
-        );
+        if (window != null) window.setBackgroundDrawable(shape(cardColor(), 18));
+        int titleId = getResources().getIdentifier("alertTitle", "id", "android");
         if (titleId > 0) {
             TextView title = (TextView)dialog.findViewById(titleId);
             if (title != null) title.setTextColor(fg());
         }
-
-        int messageId = getResources().getIdentifier(
-            "message", "id", "android"
-        );
+        int messageId = getResources().getIdentifier("message", "id", "android");
         if (messageId > 0) {
             TextView message = (TextView)dialog.findViewById(messageId);
             if (message != null) message.setTextColor(fg());
         }
-
-        int button1 = getResources().getIdentifier(
-            "button1", "id", "android"
-        );
-        int button2 = getResources().getIdentifier(
-            "button2", "id", "android"
-        );
-        int button3 = getResources().getIdentifier(
-            "button3", "id", "android"
-        );
-
-        int[] buttonIds = { button1, button2, button3 };
-        for (int id : buttonIds) {
+        int b1 = getResources().getIdentifier("button1", "id", "android");
+        int b2 = getResources().getIdentifier("button2", "id", "android");
+        int b3 = getResources().getIdentifier("button3", "id", "android");
+        int[] ids = { b1, b2, b3 };
+        for (int id : ids) {
             if (id <= 0) continue;
             Button dialogButton = (Button)dialog.findViewById(id);
-            if (dialogButton != null) {
-                dialogButton.setTextColor(accent());
-            }
+            if (dialogButton != null) dialogButton.setTextColor(accent());
         }
     }
 
@@ -217,14 +206,10 @@ public class MainActivity extends Activity {
             infoDialog("TruckLog", message);
             return;
         }
-
         inlineMessage.setText(message);
         inlineMessage.setVisibility(View.VISIBLE);
-
         handler.postDelayed(() -> {
-            if (inlineMessage != null) {
-                inlineMessage.setVisibility(View.GONE);
-            }
+            if (inlineMessage != null) inlineMessage.setVisibility(View.GONE);
         }, 3500);
     }
 
@@ -238,12 +223,6 @@ public class MainActivity extends Activity {
         return calendar.getTimeInMillis();
     }
 
-    /**
-     * Смена считается начатой, если:
-     * - идёт рейс (running), ИЛИ
-     * - shiftStartedAt > 0, ИЛИ
-     * - уже есть круги/заработок в текущей смене.
-     */
     private boolean isShiftStarted() {
         if (running) return true;
         if (prefs.getLong("shiftStartedAt", 0L) > 0L) return true;
@@ -257,22 +236,17 @@ public class MainActivity extends Activity {
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= 26) {
             NotificationChannel channel = new NotificationChannel(
-                CHANNEL_ID,
-                "TruckLog",
-                NotificationManager.IMPORTANCE_DEFAULT
+                CHANNEL_ID, "TruckLog", NotificationManager.IMPORTANCE_DEFAULT
             );
-            NotificationManager nm = (NotificationManager)
-                getSystemService(NOTIFICATION_SERVICE);
+            NotificationManager nm = (NotificationManager)getSystemService(NOTIFICATION_SERVICE);
             if (nm != null) nm.createNotificationChannel(channel);
         }
     }
 
     private void notifyUser(int id, String title, String text) {
         if (!prefs.getBoolean("notifications_enabled", true)) return;
-
         try {
             createNotificationChannel();
-
             Intent intent = new Intent(this, MainActivity.class);
             PendingIntent pi = PendingIntent.getActivity(
                 this, id, intent,
@@ -280,22 +254,13 @@ public class MainActivity extends Activity {
                     ? PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT
                     : PendingIntent.FLAG_UPDATE_CURRENT
             );
-
             Notification.Builder builder;
-            if (Build.VERSION.SDK_INT >= 26) {
-                builder = new Notification.Builder(this, CHANNEL_ID);
-            } else {
-                builder = new Notification.Builder(this);
-            }
-
-            builder.setContentTitle(title)
-                .setContentText(text)
+            if (Build.VERSION.SDK_INT >= 26) builder = new Notification.Builder(this, CHANNEL_ID);
+            else builder = new Notification.Builder(this);
+            builder.setContentTitle(title).setContentText(text)
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
-                .setAutoCancel(true)
-                .setContentIntent(pi);
-
-            NotificationManager nm = (NotificationManager)
-                getSystemService(NOTIFICATION_SERVICE);
+                .setAutoCancel(true).setContentIntent(pi);
+            NotificationManager nm = (NotificationManager)getSystemService(NOTIFICATION_SERVICE);
             if (nm != null) nm.notify(id, builder.build());
         } catch (Exception ignored) {
         }
@@ -304,27 +269,16 @@ public class MainActivity extends Activity {
     @Override
     public void onCreate(Bundle state) {
         super.onCreate(state);
-
         prefs = getSharedPreferences("truck_stats", MODE_PRIVATE);
         repository = DataRepository.getInstance(this);
-
         if (!repository.initialize()) {
-            infoDialog(
-                "История",
-                "Не удалось перенести историю. Старые данные сохранены."
-            );
+            infoDialog("История", "Не удалось перенести историю. Старые данные сохранены.");
         }
-
         listener = (p, key) -> {
             if (key == null) return;
-            runOnUiThread(() -> {
-                syncData();
-                renderPage();
-            });
+            runOnUiThread(() -> { syncData(); renderPage(); });
         };
-
         prefs.registerOnSharedPreferenceChangeListener(listener);
-
         syncData();
         buildBase();
         renderPage();
@@ -338,119 +292,116 @@ public class MainActivity extends Activity {
         running = prefs.getBoolean("running", false);
     }
 
+    // ---------------- КАРКАС: шапка + контент + нижняя навигация ----------------
+
     private void buildBase() {
         frame = new FrameLayout(this);
-
         root = new LinearLayout(this);
         root.setOrientation(1);
         root.setBackgroundColor(background());
 
+        // Шапка
         LinearLayout header = new LinearLayout(this);
         header.setGravity(Gravity.CENTER_VERTICAL);
-        header.setPadding(dp(16), dp(12), dp(16), dp(12));
-
-        Button menu = button("❯❯❯", accent());
-        LinearLayout.LayoutParams menuParams =
-            new LinearLayout.LayoutParams(dp(62), dp(46));
-        menuParams.topMargin = dp(8);
-        header.addView(menu, menuParams);
-        menu.setOnClickListener(v -> toggleDrawer());
+        header.setPadding(dp(20), dp(18), dp(20), dp(10));
 
         LinearLayout labels = new LinearLayout(this);
         labels.setOrientation(1);
-        labels.setPadding(dp(12), 0, 0, 0);
-        labels.addView(text("MATRESHKA", 11, muted(), true));
-        labels.addView(text("TRUCK HELPER", 20, fg(), true));
+        labels.addView(text("TRUCKLOG", 22, fg(), true));
+        labels.addView(text("Бортовой компьютер", 12, muted(), false));
+        header.addView(labels, new LinearLayout.LayoutParams(0, -2, 1));
 
-        header.addView(labels);
+        TextView balanceChip = text(money(balance) + " ₽", 13, accent(), true);
+        balanceChip.setBackground(outline(cardColor(), 20, accent()));
+        balanceChip.setPadding(dp(14), dp(8), dp(14), dp(8));
+        header.addView(balanceChip);
+
         root.addView(header);
 
+        // Инлайн-сообщение
         inlineMessage = text("", 13, accent(), true);
         inlineMessage.setVisibility(View.GONE);
-        inlineMessage.setPadding(dp(18), dp(8), dp(18), dp(8));
+        inlineMessage.setPadding(dp(20), dp(6), dp(20), dp(6));
         root.addView(inlineMessage);
 
+        // Скролл контента
         ScrollView scroll = new ScrollView(this);
+        scroll.setFillViewport(true);
         content = new LinearLayout(this);
         content.setOrientation(1);
-        content.setPadding(dp(18), dp(8), dp(18), dp(24));
+        content.setPadding(dp(20), dp(8), dp(20), dp(20));
         scroll.addView(content);
+        root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
 
-        root.addView(
-            scroll,
-            new LinearLayout.LayoutParams(-1, 0, 1)
-        );
+        // Нижняя навигация
+        bottomNav = new LinearLayout(this);
+        bottomNav.setOrientation(0);
+        bottomNav.setBackground(shape(cardColor(), 0));
+        bottomNav.setPadding(dp(8), dp(8), dp(8), dp(12));
+        bottomNav.setGravity(Gravity.CENTER);
+
+        addNavItem("⌂", "Главная", "home");
+        addNavItem("▦", "Статистика", "stats");
+        addNavItem("◷", "История", "history");
+        addNavItem("⚙", "Ещё", "more");
+
+        root.addView(bottomNav, new LinearLayout.LayoutParams(-1, dp(70)));
 
         frame.addView(root);
         setContentView(frame);
     }
 
-    private void rebuildBase() {
-        drawer = null;
-        buildBase();
-        renderPage();
-    }
+    private void addNavItem(String icon, String title, String target) {
+        LinearLayout item = new LinearLayout(this);
+        item.setOrientation(1);
+        item.setGravity(Gravity.CENTER);
+        item.setPadding(dp(6), dp(4), dp(6), dp(4));
 
-    private void toggleDrawer() {
-        if (drawer != null) {
-            frame.removeView(drawer);
-            drawer = null;
-            return;
-        }
+        boolean active = target.equals(page) ||
+            ("more".equals(target) && isMorePage());
 
-        drawer = new LinearLayout(this);
-        drawer.setOrientation(1);
-        drawer.setPadding(dp(16), dp(22), dp(12), dp(20));
-        drawer.setBackground(shape(cardColor(), 0));
+        TextView iconView = text(icon, 20, active ? accent() : muted(), true);
+        iconView.setGravity(Gravity.CENTER);
+        item.addView(iconView);
 
-        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
-            dp(270), -1, Gravity.LEFT
-        );
-        frame.addView(drawer, lp);
+        TextView titleView = text(title, 10, active ? accent() : muted(), true);
+        titleView.setGravity(Gravity.CENTER);
+        item.addView(titleView);
 
-        drawer.addView(text("TRUCK HELPER", 20, fg(), true));
-        drawer.addView(text("РАЗДЕЛЫ ПРИЛОЖЕНИЯ", 10, muted(), true));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -1, 1);
+        bottomNav.addView(item, lp);
 
-        addDrawerItem("⌂", "Главная", "home");
-        addDrawerItem("▦", "Статистика", "stats");
-        addDrawerItem("▤", "Графики заработка", "charts");
-        addDrawerItem("◷", "История кругов", "history");
-        addDrawerItem("◎", "Калькулятор целей", "calculator");
-        addDrawerItem("⚙", "Настройки", "settings");
-
-        View space = new View(this);
-        drawer.addView(
-            space,
-            new LinearLayout.LayoutParams(1, 0, 1)
-        );
-
-        Button close = button("ЗАКРЫТЬ МЕНЮ", accent());
-        LinearLayout.LayoutParams closeParams =
-            new LinearLayout.LayoutParams(-1, dp(46));
-        closeParams.bottomMargin = dp(14);
-        drawer.addView(close, closeParams);
-        close.setOnClickListener(v -> toggleDrawer());
-    }
-
-    private void addDrawerItem(String icon, String title, String target) {
-        Button b = button(icon + "     " + title, cardColor());
-        b.setGravity(Gravity.CENTER_VERTICAL);
-
-        LinearLayout.LayoutParams p =
-            new LinearLayout.LayoutParams(-1, dp(50));
-        p.topMargin = dp(8);
-        drawer.addView(b, p);
-
-        b.setOnClickListener(v -> {
-            page = target;
-            toggleDrawer();
+        item.setOnClickListener(v -> {
+            if ("more".equals(target)) {
+                page = morePage;
+            } else {
+                page = target;
+            }
+            rebuildBottomNav();
             renderPage();
         });
     }
 
+    private boolean isMorePage() {
+        return "settings".equals(page) || "theme".equals(page) || "calculator".equals(page) || "charts".equals(page);
+    }
+
+    private void rebuildBottomNav() {
+        if (bottomNav == null) return;
+        bottomNav.removeAllViews();
+        addNavItem("⌂", "Главная", "home");
+        addNavItem("▦", "Статистика", "stats");
+        addNavItem("◷", "История", "history");
+        addNavItem("⚙", "Ещё", "more");
+    }
+
+    private void rebuildBase() {
+        buildBase();
+        renderPage();
+    }
+
     private void renderPage() {
         if (content == null) return;
-
         content.removeAllViews();
         syncData();
 
@@ -461,27 +412,24 @@ public class MainActivity extends Activity {
         else if ("calculator".equals(page)) showCalculator();
         else if ("theme".equals(page)) showThemes();
         else if ("settings".equals(page)) showSettings();
+        else showHome();
     }
 
     private LinearLayout card() {
         LinearLayout c = new LinearLayout(this);
         c.setOrientation(1);
-        c.setPadding(dp(16), dp(15), dp(16), dp(15));
-        c.setBackground(shape(cardColor(), 18));
-
-        LinearLayout.LayoutParams p =
-            new LinearLayout.LayoutParams(-1, -2);
+        c.setPadding(dp(18), dp(16), dp(18), dp(16));
+        c.setBackground(shape(cardColor(), 20));
+        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(-1, -2);
         p.topMargin = dp(12);
         content.addView(c, p);
         return c;
     }
 
     private void heading(String title, String subtitle) {
-        content.addView(text(title, 25, fg(), true));
+        content.addView(text(title, 24, fg(), true));
         TextView sub = text(subtitle, 13, muted(), false);
-
-        LinearLayout.LayoutParams p =
-            new LinearLayout.LayoutParams(-1, -2);
+        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(-1, -2);
         p.topMargin = dp(4);
         content.addView(sub, p);
     }
@@ -490,140 +438,138 @@ public class MainActivity extends Activity {
         return prefs.getBoolean("home_block_" + key, true);
     }
 
+    // ---------------- ГЛАВНЫЙ ЭКРАН — «КОКПИТ» ----------------
+
     private void showHome() {
-        heading("Главная", "Твой учёт рейсов и заработка");
+        // Большой баланс
+        LinearLayout hero = new LinearLayout(this);
+        hero.setOrientation(1);
+        hero.setPadding(dp(20), dp(20), dp(20), dp(20));
+        hero.setBackground(shape(cardColor(), 24));
 
-        if (blockVisible("balance")) {
-            LinearLayout c = card();
-            c.addView(text("ТЕКУЩИЙ БАЛАНС", 12, muted(), true));
-            c.addView(text(money(balance) + " ₽", 32, fg(), true));
+        LinearLayout.LayoutParams heroParams = new LinearLayout.LayoutParams(-1, -2);
+        heroParams.topMargin = dp(8);
+        content.addView(hero, heroParams);
 
-            long remain = Math.max(0L, goal() - balance);
-            c.addView(text(
-                "До цели осталось " + money(remain) + " ₽",
-                13, accent(), true
-            ));
+        hero.addView(text("ТЕКУЩИЙ БАЛАНС", 12, muted(), true));
 
-            ProgressBar bar = new ProgressBar(
-                this, null,
-                android.R.attr.progressBarStyleHorizontal
-            );
-            bar.setMax(100);
-            bar.setProgress((int)Math.min(
-                100.0,
-                (double)balance * 100.0 / (double)Math.max(1L, goal())
-            ));
-            bar.setProgressTintList(
-                ColorStateList.valueOf(accent())
-            );
+        TextView balanceView = text(money(balance) + " ₽", 40, fg(), true);
+        LinearLayout.LayoutParams bv = new LinearLayout.LayoutParams(-1, -2);
+        bv.topMargin = dp(6);
+        hero.addView(balanceView, bv);
 
-            LinearLayout.LayoutParams bp =
-                new LinearLayout.LayoutParams(-1, dp(8));
-            bp.topMargin = dp(12);
-            c.addView(bar, bp);
-        }
+        long remain = Math.max(0L, goal() - balance);
+        hero.addView(text("До цели: " + money(remain) + " ₽", 13, accent(), true));
 
-        LinearLayout stats = new LinearLayout(this);
-        stats.setOrientation(0);
+        ProgressBar bar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
+        bar.setMax(100);
+        bar.setProgress((int)Math.min(100.0, (double)balance * 100.0 / (double)Math.max(1L, goal())));
+        bar.setProgressTintList(ColorStateList.valueOf(accent()));
+        LinearLayout.LayoutParams bp = new LinearLayout.LayoutParams(-1, dp(8));
+        bp.topMargin = dp(14);
+        hero.addView(bar, bp);
 
-        LinearLayout.LayoutParams stp =
-            new LinearLayout.LayoutParams(-1, -2);
-        stp.topMargin = dp(12);
-        content.addView(stats, stp);
+        // Мини-плитки: круги / выплата
+        LinearLayout tiles = new LinearLayout(this);
+        tiles.setOrientation(0);
+        LinearLayout.LayoutParams tp = new LinearLayout.LayoutParams(-1, -2);
+        tp.topMargin = dp(12);
+        content.addView(tiles, tp);
 
         if (blockVisible("rounds")) {
-            LinearLayout a = miniCard("КРУГИ", String.valueOf(trips));
-            LinearLayout.LayoutParams mp =
-                new LinearLayout.LayoutParams(0, -2, 1);
-            mp.rightMargin = dp(5);
-            stats.addView(a, mp);
+            LinearLayout t1 = miniTile("КРУГИ", String.valueOf(trips), accent());
+            LinearLayout.LayoutParams lp1 = new LinearLayout.LayoutParams(0, -2, 1);
+            lp1.rightMargin = dp(6);
+            tiles.addView(t1, lp1);
         }
-
         if (blockVisible("payout")) {
-            LinearLayout b = miniCard("ВЫПЛАТА", money(pay()) + " ₽");
-            LinearLayout.LayoutParams mp =
-                new LinearLayout.LayoutParams(0, -2, 1);
-            mp.leftMargin = dp(5);
-            stats.addView(b, mp);
+            LinearLayout t2 = miniTile("ВЫПЛАТА", money(pay()) + " ₽", fg());
+            LinearLayout.LayoutParams lp2 = new LinearLayout.LayoutParams(0, -2, 1);
+            lp2.leftMargin = dp(6);
+            tiles.addView(t2, lp2);
         }
 
+        // Таймер
         if (blockVisible("timer")) {
-            LinearLayout timer = card();
-            timer.addView(text("ТЕКУЩИЙ РЕЙС", 12, muted(), true));
-
-            timerView = text("00:00:00", 28, fg(), true);
-            timer.addView(timerView);
-
-            timer.addView(text(
-                running ? "Рейс уже идёт" : "Ожидание начала рейса",
+            LinearLayout timerCard = card();
+            timerCard.addView(text("ТЕКУЩИЙ РЕЙС", 12, muted(), true));
+            timerView = text(running ? formatTime((System.currentTimeMillis() - startAt) / 1000) : "00:00:00", 34, fg(), true);
+            timerCard.addView(timerView);
+            timerCard.addView(text(
+                running ? "Рейс идёт" : (isShiftStarted() ? "Смена активна" : "Смена не начата"),
                 12, muted(), false
             ));
         } else {
             timerView = null;
         }
 
-        Button start = button(
-            running ? "РЕЙС УЖЕ ИДЁТ" : "НАЧАТЬ РЕЙС",
-            accent()
-        );
+        // Кнопка «Начать рейс» / «Сделал круг» (основная)
+        Button main;
+        if (!running && !isShiftStarted()) {
+            main = button("НАЧАТЬ СМЕНУ", accent());
+            main.setOnClickListener(v -> startTrip());
+        } else if (running) {
+            main = button("ЗАВЕРШИТЬ РЕЙС", accent());
+            main.setOnClickListener(v -> finishTrip());
+        } else {
+            main = button("СДЕЛАЛ КРУГ  +" + money(pay()) + " ₽", accent());
+            main.setOnClickListener(v -> finishTrip());
+        }
+        LinearLayout.LayoutParams mp = new LinearLayout.LayoutParams(-1, dp(58));
+        mp.topMargin = dp(14);
+        content.addView(main, mp);
 
-        LinearLayout.LayoutParams p =
-            new LinearLayout.LayoutParams(-1, dp(52));
-        p.topMargin = dp(12);
-        content.addView(start, p);
-
-        start.setEnabled(!running);
-        start.setOnClickListener(v -> startTrip());
-
+        // Кнопка «Завершить смену»
         Button finishShift = button(
-            running ? "ЗАВЕРШИТЬ СМЕНУ (рейс будет отменён)"
-                    : "ЗАВЕРШИТЬ СМЕНУ",
-            accent()
-        );
-
-        LinearLayout.LayoutParams shiftParams =
-            new LinearLayout.LayoutParams(-1, dp(52));
-        shiftParams.topMargin = dp(12);
-        content.addView(finishShift, shiftParams);
-
-        finishShift.setEnabled(true);
-        finishShift.setOnClickListener(v -> confirmFinishShift());
-
-        Button resetStats = button(
-            "СБРОСИТЬ ТЕКУЩИЙ БАЛАНС И КРУГИ",
+            running ? "ЗАВЕРШИТЬ СМЕНУ (рейс отменится)" : "ЗАВЕРШИТЬ СМЕНУ",
             cardColor()
         );
+        finishShift.setBackground(outline(cardColor(), 14, accent()));
+        LinearLayout.LayoutParams sp = new LinearLayout.LayoutParams(-1, dp(52));
+        sp.topMargin = dp(8);
+        content.addView(finishShift, sp);
+        finishShift.setOnClickListener(v -> confirmFinishShift());
 
-        LinearLayout.LayoutParams resetParams =
-            new LinearLayout.LayoutParams(-1, dp(48));
-        resetParams.topMargin = dp(8);
-        content.addView(resetStats, resetParams);
+        // Сброс
+        Button resetStats = button("СБРОСИТЬ БАЛАНС И КРУГИ", cardColor());
+        resetStats.setBackground(outline(cardColor(), 14, 0xFFB84040));
+        resetStats.setTextColor(0xFFEF9A9A);
+        LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(-1, dp(48));
+        rp.topMargin = dp(8);
+        content.addView(resetStats, rp);
         resetStats.setOnClickListener(v -> showHomeResetDialog());
 
+        // Панель
         if (blockVisible("overlay")) {
             Button overlay = button(
-                prefs.getBoolean("panel_enabled", false)
-                    ? "ПАНЕЛЬ ПОВЕРХ ИГРЫ ВКЛЮЧЕНА"
-                    : "ВКЛЮЧИТЬ ПАНЕЛЬ ПОВЕРХ ИГРЫ",
+                prefs.getBoolean("panel_enabled", false) ? "ПАНЕЛЬ ВКЛЮЧЕНА" : "ВКЛЮЧИТЬ ПАНЕЛЬ",
                 cardColor()
             );
-
-            LinearLayout.LayoutParams op =
-                new LinearLayout.LayoutParams(-1, dp(48));
-            op.topMargin = dp(12);
+            overlay.setBackground(outline(cardColor(), 14, accent()));
+            LinearLayout.LayoutParams op = new LinearLayout.LayoutParams(-1, dp(48));
+            op.topMargin = dp(8);
             content.addView(overlay, op);
             overlay.setOnClickListener(v -> toggleOverlay());
         }
     }
 
+    private LinearLayout miniTile(String title, String value, int valueColor) {
+        LinearLayout t = new LinearLayout(this);
+        t.setOrientation(1);
+        t.setPadding(dp(16), dp(14), dp(16), dp(14));
+        t.setBackground(shape(cardColor(), 18));
+        t.addView(text(title, 11, muted(), true));
+        TextView v = text(value, 24, valueColor, true);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+        lp.topMargin = dp(4);
+        t.addView(v, lp);
+        return t;
+    }
+
     private void showHomeResetDialog() {
         AlertDialog dialog = new AlertDialog.Builder(this)
             .setTitle("Сбросить текущий баланс и круги?")
-            .setMessage(
-                "Будут обнулены только текущий баланс, количество кругов, " +
-                "заработок и таймер текущей смены. " +
-                "История рейсов, графики и общая статистика останутся без изменений."
-            )
+            .setMessage("Будут обнулены только текущий баланс, количество кругов, заработок и таймер текущей смены. История рейсов, графики и общая статистика останутся без изменений.")
             .setNegativeButton("Отмена", null)
             .setPositiveButton("Сбросить", (d, which) -> {
                 boolean saved = resetShiftNow();
@@ -632,14 +578,10 @@ public class MainActivity extends Activity {
                     renderPage();
                     showInline("Баланс и круги сброшены. История сохранена.");
                 } else {
-                    infoDialog(
-                        "Сброс не выполнен",
-                        "Не удалось сохранить сброс. Попробуй ещё раз."
-                    );
+                    infoDialog("Сброс не выполнен", "Не удалось сохранить сброс. Попробуй ещё раз.");
                 }
             })
             .create();
-
         showThemedDialog(dialog);
     }
 
@@ -658,7 +600,6 @@ public class MainActivity extends Activity {
                 .remove("panel_last_trip_id")
                 .remove("panel_last_trip_amount")
                 .commit();
-
         } catch (Exception e) {
             return false;
         }
@@ -667,25 +608,18 @@ public class MainActivity extends Activity {
     private void confirmFinishShift() {
         long earned = Math.max(0L, read("shiftEarned"));
         long shiftTrips = Math.max(0L, read("shiftTrips"));
-
         AlertDialog finishShiftDialog = new AlertDialog.Builder(this)
             .setTitle("Завершить смену?")
             .setMessage(
                 "Заработок: " + money(earned) + " ₽\n" +
                 "Кругов: " + shiftTrips + "\n" +
                 "Время: " + formatTime(seconds) + "\n\n" +
-                (running
-                    ? "Текущий незавершённый рейс будет отменён без выплаты.\n\n"
-                    : "") +
-                "Результаты будут сохранены в историю смен. " +
-                "Общий баланс и история кругов останутся без изменений."
+                (running ? "Текущий незавершённый рейс будет отменён без выплаты.\n\n" : "") +
+                "Результаты будут сохранены в историю смен."
             )
             .setNegativeButton("Отмена", null)
-            .setPositiveButton("Завершить", (dialog, which) ->
-                finishShift()
-            )
+            .setPositiveButton("Завершить", (dialog, which) -> finishShift())
             .create();
-
         showThemedDialog(finishShiftDialog);
     }
 
@@ -699,15 +633,10 @@ public class MainActivity extends Activity {
                 .putBoolean("running", false)
                 .putLong("startAt", 0L)
                 .commit();
-
             if (!stopped) {
-                infoDialog(
-                    "Смена не закрыта",
-                    "Не удалось остановить текущий рейс. Попробуй ещё раз."
-                );
+                infoDialog("Смена не закрыта", "Не удалось остановить текущий рейс. Попробуй ещё раз.");
                 return;
             }
-
             running = false;
             startAt = 0L;
             handler.removeCallbacks(ticker);
@@ -715,58 +644,29 @@ public class MainActivity extends Activity {
 
         long finishTime = System.currentTimeMillis();
         long startedAt = prefs.getLong("shiftStartedAt", 0);
-
-        if (startedAt <= 0 || startedAt > finishTime) {
-            startedAt = finishTime;
-        }
+        if (startedAt <= 0 || startedAt > finishTime) startedAt = finishTime;
 
         try {
-            String shiftKey = prefs.getString(
-                "pending_shift_key",
-                null
-            );
-
+            String shiftKey = prefs.getString("pending_shift_key", null);
             if (shiftKey == null || shiftKey.trim().isEmpty()) {
                 shiftKey = UUID.randomUUID().toString();
-
-                boolean keySaved = prefs.edit()
-                    .putString("pending_shift_key", shiftKey)
-                    .commit();
-
+                boolean keySaved = prefs.edit().putString("pending_shift_key", shiftKey).commit();
                 if (!keySaved) {
-                    infoDialog(
-                        "Смена не сохранена",
-                        "Не удалось подготовить сохранение смены. Повтори попытку."
-                    );
+                    infoDialog("Смена не сохранена", "Не удалось подготовить сохранение смены.");
                     return;
                 }
             }
 
-            long shiftId = repository.addShift(
-                earned,
-                shiftTrips,
-                duration,
-                startedAt,
-                finishTime,
-                "",
-                shiftKey
-            );
-
+            long shiftId = repository.addShift(earned, shiftTrips, duration, startedAt, finishTime, "", shiftKey);
             if (shiftId <= 0) {
-                infoDialog(
-                    "Смена не сохранена",
-                    "Не удалось сохранить смену. Текущие показатели не сброшены."
-                );
+                infoDialog("Смена не сохранена", "Не удалось сохранить смену.");
                 return;
             }
 
             boolean saved = prefs.edit()
-                .putLong("shiftEarned", 0)
-                .putLong("shiftTrips", 0)
-                .putLong("seconds", 0)
-                .putLong("shiftStartedAt", 0)
-                .putBoolean("running", false)
-                .putLong("startAt", 0)
+                .putLong("shiftEarned", 0).putLong("shiftTrips", 0)
+                .putLong("seconds", 0).putLong("shiftStartedAt", 0)
+                .putBoolean("running", false).putLong("startAt", 0)
                 .remove("panel_undo_stack")
                 .remove("panel_last_trip_id")
                 .remove("panel_last_trip_amount")
@@ -774,56 +674,26 @@ public class MainActivity extends Activity {
                 .commit();
 
             if (!saved) {
-                infoDialog(
-                    "Смена сохранена",
-                    "Не удалось обновить текущие показатели. Повтори завершение — повторная запись не появится."
-                );
+                infoDialog("Смена сохранена", "Не удалось обновить текущие показатели.");
                 return;
             }
 
-            seconds = 0;
-            startAt = 0;
-            running = false;
-
+            seconds = 0; startAt = 0; running = false;
             handler.removeCallbacks(ticker);
             renderPage();
 
-            notifyUser(
-                NOTIF_SHIFT,
-                "Смена завершена",
-                "Заработок: " + money(earned) + " ₽, кругов: " + shiftTrips
-            );
+            notifyUser(NOTIF_SHIFT, "Смена завершена",
+                "Заработок: " + money(earned) + " ₽, кругов: " + shiftTrips);
 
-            infoDialog(
-                "Смена завершена!",
-                "Смена сохранена в историю.\n\n" +
-                "Заработок: " + money(earned) + " ₽\n" +
-                "Кругов: " + shiftTrips + "\n" +
-                "Время: " + formatTime(duration) + "\n\n" +
-                "Можешь начинать следующую смену."
-            );
-
+            infoDialog("Смена завершена!",
+                "Смена сохранена в историю.\n\nЗаработок: " + money(earned) + " ₽\nКругов: " + shiftTrips + "\nВремя: " + formatTime(duration));
         } catch (Exception e) {
-            infoDialog(
-                "Смена не сохранена",
-                "Не удалось сохранить смену. Текущие показатели не сброшены."
-            );
+            infoDialog("Смена не сохранена", "Не удалось сохранить смену.");
         }
-    }
-
-    private LinearLayout miniCard(String title, String value) {
-        LinearLayout c = new LinearLayout(this);
-        c.setOrientation(1);
-        c.setPadding(dp(14), dp(14), dp(14), dp(14));
-        c.setBackground(shape(cardColor(), 16));
-        c.addView(text(title, 11, muted(), true));
-        c.addView(text(value, 22, fg(), true));
-        return c;
     }
 
     private void startTrip() {
         if (running) return;
-
         startAt = System.currentTimeMillis();
         running = true;
 
@@ -834,23 +704,15 @@ public class MainActivity extends Activity {
         long shiftStartedAt = prefs.getLong("shiftStartedAt", 0);
         long shiftEarned = read("shiftEarned");
         long shiftTrips = read("shiftTrips");
-
-        if (shiftStartedAt <= 0 &&
-            shiftEarned == 0 && shiftTrips == 0) {
+        if (shiftStartedAt <= 0 && shiftEarned == 0 && shiftTrips == 0) {
             editor.putLong("shiftStartedAt", startAt);
         }
-
         editor.apply();
         renderPage();
 
         if (prefs.getBoolean("shift_start_notifications", false)) {
-            notifyUser(
-                NOTIF_SHIFT,
-                "Смена начата",
-                "Таймер рейса запущен"
-            );
+            notifyUser(NOTIF_SHIFT, "Смена начата", "Таймер рейса запущен");
         }
-
         handler.removeCallbacks(ticker);
         handler.post(ticker);
     }
@@ -859,37 +721,30 @@ public class MainActivity extends Activity {
         @Override
         public void run() {
             if (!running) return;
-
             if (timerView != null) {
-                long elapsed = Math.max(
-                    0L,
-                    (System.currentTimeMillis() - startAt) / 1000
-                );
+                long elapsed = Math.max(0L, (System.currentTimeMillis() - startAt) / 1000);
                 timerView.setText(formatTime(elapsed));
             }
-
             handler.postDelayed(this, 1000);
         }
     };
 
-    // В этой версии finishTrip() не вызывается из UI (кнопка убрана),
-    // но оставлен для совместимости.
     private void finishTrip() {
         if (!isShiftStarted()) {
-            showInline("Сначала начни смену (Начать рейс)");
+            showInline("Сначала начни смену");
             return;
         }
 
-        if (!running) return;
-
-        long elapsed = Math.max(
-            1L,
-            (System.currentTimeMillis() - startAt) / 1000
-        );
-
+        long elapsed;
         long amount = pay();
         long shiftEarned = read("shiftEarned");
         long shiftTrips = read("shiftTrips");
+
+        if (running) {
+            elapsed = Math.max(1L, (System.currentTimeMillis() - startAt) / 1000);
+        } else {
+            elapsed = 0L;
+        }
 
         if (balance > Long.MAX_VALUE - amount ||
             trips == Long.MAX_VALUE ||
@@ -902,18 +757,11 @@ public class MainActivity extends Activity {
 
         long finishTime = System.currentTimeMillis();
         long shiftStartedAt = prefs.getLong("shiftStartedAt", 0);
+        if (shiftStartedAt <= 0) shiftStartedAt = finishTime;
 
-        if (shiftStartedAt <= 0) shiftStartedAt = startAt;
-
-        long recordId = repository.addTrip(
-            amount, finishTime, elapsed, "", "", "manual"
-        );
-
+        long recordId = repository.addTrip(amount, finishTime, elapsed, "", "", "manual");
         if (recordId <= 0) {
-            infoDialog(
-                "Рейс не сохранён",
-                "Не удалось сохранить рейс. Статистика не изменена."
-            );
+            infoDialog("Рейс не сохранён", "Не удалось сохранить рейс.");
             return;
         }
 
@@ -934,28 +782,18 @@ public class MainActivity extends Activity {
 
         running = false;
         startAt = 0;
-
         handler.removeCallbacks(ticker);
         renderPage();
-
-        infoDialog(
-            "Рейс завершён",
-            "+" + money(amount) + " ₽\nВремя: " +
-            formatTime(elapsed)
-        );
+        showInline("+" + money(amount) + " ₽ — круг засчитан");
     }
 
-    private void showStats() {
-        heading("Статистика", "Твои результаты и личные рекорды");
+    // ---------------- СТАТИСТИКА ----------------
 
-        long today = 0;
-        long week = 0;
-        long todayTrips = 0;
-        long weekTrips = 0;
-        long totalAmount = 0;
-        long totalCount = 0;
-        long totalDuration = 0;
-        long durationCount = 0;
+    private void showStats() {
+        heading("Статистика", "Результаты и личные рекорды");
+
+        long today = 0, week = 0, todayTrips = 0, weekTrips = 0;
+        long totalAmount = 0, totalCount = 0, totalDuration = 0, durationCount = 0;
 
         HashMap<String, Long> daily = new HashMap<>();
         HashMap<String, Long> dailyCounts = new HashMap<>();
@@ -968,16 +806,12 @@ public class MainActivity extends Activity {
         weekStart.add(Calendar.DAY_OF_YEAR, -6);
         long weekStartTime = weekStart.getTimeInMillis();
 
-        SimpleDateFormat dayKey = new SimpleDateFormat(
-            "yyyyMMdd", Locale.US
-        );
-
+        SimpleDateFormat dayKey = new SimpleDateFormat("yyyyMMdd", Locale.US);
         Cursor cursor = null;
 
         try {
             cursor = repository.getTripsHistory();
             if (cursor == null) throw new Exception();
-
             int amountColumn = cursor.getColumnIndexOrThrow("amount");
             int timeColumn = cursor.getColumnIndexOrThrow("created_at");
             int durationColumn = cursor.getColumnIndex("duration");
@@ -985,19 +819,12 @@ public class MainActivity extends Activity {
             while (cursor.moveToNext()) {
                 long time = cursor.getLong(timeColumn);
                 long amount = cursor.getLong(amountColumn);
-                long itemDuration = durationColumn >= 0
-                    ? cursor.getLong(durationColumn) : 0L;
+                long itemDuration = durationColumn >= 0 ? cursor.getLong(durationColumn) : 0L;
                 long itemDayStart = startOfDay(time);
-
-                long earningsReset =
-                    repository.getDailyMetricReset(itemDayStart, "earnings");
-                long tripsReset =
-                    repository.getDailyMetricReset(itemDayStart, "trips");
-
-                boolean includeEarnings =
-                    earningsReset <= 0 || time >= earningsReset;
-                boolean includeTrip =
-                    tripsReset <= 0 || time >= tripsReset;
+                long earningsReset = repository.getDailyMetricReset(itemDayStart, "earnings");
+                long tripsReset = repository.getDailyMetricReset(itemDayStart, "trips");
+                boolean includeEarnings = earningsReset <= 0 || time >= earningsReset;
+                boolean includeTrip = tripsReset <= 0 || time >= tripsReset;
 
                 Calendar itemDay = Calendar.getInstance();
                 itemDay.setTimeInMillis(time);
@@ -1006,75 +833,53 @@ public class MainActivity extends Activity {
 
                 if (includeEarnings) {
                     totalAmount = safeAdd(totalAmount, amount);
-                    long value = safeAdd(
-                        daily.containsKey(key) ? daily.get(key) : 0L,
-                        amount
-                    );
+                    long value = safeAdd(daily.containsKey(key) ? daily.get(key) : 0L, amount);
                     daily.put(key, value);
-
                     int wd = itemDay.get(Calendar.DAY_OF_WEEK) - 1;
                     weekdayAmounts[wd] = safeAdd(weekdayAmounts[wd], amount);
-
-                    if (time >= todayStart) {
-                        today = safeAdd(today, amount);
-                    }
-                    if (time >= weekStartTime) {
-                        week = safeAdd(week, amount);
-                    }
+                    if (time >= todayStart) today = safeAdd(today, amount);
+                    if (time >= weekStartTime) week = safeAdd(week, amount);
                 }
-
                 if (includeTrip) {
                     totalCount++;
-                    long count = safeAdd(
-                        dailyCounts.containsKey(key)
-                            ? dailyCounts.get(key) : 0L,
-                        1L
-                    );
+                    long count = safeAdd(dailyCounts.containsKey(key) ? dailyCounts.get(key) : 0L, 1L);
                     dailyCounts.put(key, count);
-
                     if (time >= todayStart) todayTrips++;
                     if (time >= weekStartTime) weekTrips++;
                 }
-
                 if (itemDuration > 0) {
                     totalDuration = safeAdd(totalDuration, itemDuration);
                     durationCount++;
                 }
             }
-
         } catch (Exception e) {
             infoDialog("Статистика", "Не удалось загрузить статистику.");
         } finally {
             if (cursor != null) cursor.close();
         }
 
-        LinearLayout a = card();
-        a.addView(text("СЕГОДНЯ", 12, muted(), true));
-        a.addView(text(money(today) + " ₽", 29, accent(), true));
-        a.addView(text("Кругов: " + todayTrips, 14, fg(), false));
+        LinearLayout tileRow1 = new LinearLayout(this);
+        tileRow1.setOrientation(0);
+        LinearLayout.LayoutParams trp = new LinearLayout.LayoutParams(-1, -2);
+        trp.topMargin = dp(12);
+        content.addView(tileRow1, trp);
 
-        LinearLayout b = card();
-        b.addView(text("ПОСЛЕДНИЕ 7 ДНЕЙ", 12, muted(), true));
-        b.addView(text(money(week) + " ₽", 29, accent(), true));
-        b.addView(text("Кругов: " + weekTrips, 14, fg(), false));
+        LinearLayout t1 = miniTile("СЕГОДНЯ", money(today) + " ₽", accent());
+        LinearLayout.LayoutParams p1 = new LinearLayout.LayoutParams(0, -2, 1);
+        p1.rightMargin = dp(6);
+        tileRow1.addView(t1, p1);
+
+        LinearLayout t2 = miniTile("7 ДНЕЙ", money(week) + " ₽", accent());
+        LinearLayout.LayoutParams p2 = new LinearLayout.LayoutParams(0, -2, 1);
+        p2.leftMargin = dp(6);
+        tileRow1.addView(t2, p2);
 
         LinearLayout all = card();
         all.addView(text("ЗА ВСЁ ВРЕМЯ", 12, muted(), true));
-        all.addView(text(money(totalAmount) + " ₽", 25, fg(), true));
-        all.addView(text("Всего кругов: " + totalCount, 14, fg(), false));
-        all.addView(text(
-            "Средний заработок за круг: " +
-            money(totalCount > 0 ? totalAmount / totalCount : 0) + " ₽",
-            14, muted(), false
-        ));
-
-        long avgDuration = durationCount > 0
-            ? totalDuration / durationCount : 0L;
-
-        all.addView(text(
-            "Средняя длительность рейса: " + formatTime(avgDuration),
-            14, muted(), false
-        ));
+        all.addView(text(money(totalAmount) + " ₽", 26, fg(), true));
+        all.addView(text("Кругов: " + totalCount, 13, muted(), false));
+        all.addView(text("Средний за круг: " + money(totalCount > 0 ? totalAmount / totalCount : 0) + " ₽", 13, muted(), false));
+        all.addView(text("Средняя длительность: " + formatTime(durationCount > 0 ? totalDuration / durationCount : 0L), 13, muted(), false));
 
         int bestWeekday = -1;
         long bestWeekdayAmount = 0;
@@ -1084,124 +889,17 @@ public class MainActivity extends Activity {
                 bestWeekday = i;
             }
         }
-
         if (bestWeekday >= 0 && bestWeekdayAmount > 0) {
-            String[] weekdays = {
-                "Воскресенье", "Понедельник", "Вторник",
-                "Среда", "Четверг", "Пятница", "Суббота"
-            };
-            all.addView(text(
-                "Самый прибыльный день недели: " +
-                weekdays[bestWeekday] + " (" +
-                money(bestWeekdayAmount) + " ₽)",
-                14, accent(), true
-            ));
+            String[] weekdays = { "Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб" };
+            all.addView(text("Лучший день недели: " + weekdays[bestWeekday] + " (" + money(bestWeekdayAmount) + " ₽)", 13, accent(), true));
         }
+        all.addView(text("Серия дней: " + calculateStreak(allDays), 13, muted(), false));
 
-        all.addView(text(
-            "Серия дней с рейсами: " + calculateStreak(allDays),
-            14, muted(), false
-        ));
-
-        long shiftCount = 0;
-        long bestShift = 0;
-        Cursor shifts = null;
-
-        try {
-            shifts = repository.getShiftsHistory();
-
-            if (shifts != null) {
-                int earnedColumn = shifts.getColumnIndex("earned");
-                while (shifts.moveToNext()) {
-                    shiftCount++;
-                    if (earnedColumn >= 0) {
-                        bestShift = Math.max(
-                            bestShift,
-                            shifts.getLong(earnedColumn)
-                        );
-                    }
-                }
-            }
-        } catch (Exception ignored) {
-        } finally {
-            if (shifts != null) shifts.close();
-        }
-
-        LinearLayout shiftStats = card();
-        shiftStats.addView(text("СМЕНЫ", 15, fg(), true));
-        shiftStats.addView(text(
-            "Всего смен: " + shiftCount, 14, fg(), false
-        ));
-        shiftStats.addView(text(
-            "Лучший заработок за смену: " + money(bestShift) + " ₽",
-            14, accent(), true
-        ));
-
-        LinearLayout daysCard = card();
-        daysCard.addView(text("СТАТИСТИКА ПО ДНЯМ", 15, fg(), true));
-        daysCard.addView(text(
-            "Можно отдельно сбросить заработок или количество кругов. " +
-            "Баланс и история рейсов при этом не меняются.",
-            12, muted(), false
-        ));
-
-        SimpleDateFormat dateFormat = new SimpleDateFormat(
-            "dd.MM.yyyy", Locale.getDefault()
-        );
-
-        ArrayList<String> sortedDays = new ArrayList<>(allDays);
-        Collections.sort(sortedDays, Collections.reverseOrder());
-
-        for (String key : sortedDays) {
-            try {
-                Date parsedDay = dayKey.parse(key);
-                if (parsedDay == null) continue;
-
-                long dayStart = startOfDay(parsedDay.getTime());
-                long amount = daily.containsKey(key) ? daily.get(key) : 0L;
-                long count = dailyCounts.containsKey(key)
-                    ? dailyCounts.get(key) : 0L;
-
-                LinearLayout row = new LinearLayout(this);
-                row.setGravity(Gravity.CENTER_VERTICAL);
-                row.setOrientation(LinearLayout.HORIZONTAL);
-
-                LinearLayout info = new LinearLayout(this);
-                info.setOrientation(LinearLayout.VERTICAL);
-                info.addView(text(
-                    dateFormat.format(parsedDay),
-                    13, fg(), true
-                ));
-                info.addView(text(
-                    money(amount) + " ₽  •  " + count + " кругов",
-                    12, muted(), false
-                ));
-
-                row.addView(info, new LinearLayout.LayoutParams(0, -2, 1));
-
-                Button resetDay = button("СБРОС", cardColor());
-                row.addView(
-                    resetDay,
-                    new LinearLayout.LayoutParams(dp(82), dp(40))
-                );
-                resetDay.setOnClickListener(v ->
-                    showDailyResetDialog(dayStart)
-                );
-
-                LinearLayout.LayoutParams rowParams =
-                    new LinearLayout.LayoutParams(-1, -2);
-                rowParams.topMargin = dp(10);
-                daysCard.addView(row, rowParams);
-            } catch (Exception ignored) {
-            }
-        }
-
+        // Лучший день
         LinearLayout records = card();
-        records.addView(text("ЛИЧНЫЕ РЕКОРДЫ", 15, fg(), true));
-
+        records.addView(text("ЛИЧНЫЕ РЕКОРДЫ", 14, fg(), true));
         long bestDay = read("best_day_amount");
         long bestDayTime = read("best_day_time");
-
         if (bestDay <= 0) {
             for (String key : daily.keySet()) {
                 long value = daily.get(key);
@@ -1210,87 +908,112 @@ public class MainActivity extends Activity {
                     try {
                         Date d = dayKey.parse(key);
                         bestDayTime = d != null ? d.getTime() : 0L;
-                    } catch (Exception ignored) {
-                        bestDayTime = 0L;
-                    }
+                    } catch (Exception ignored) { bestDayTime = 0L; }
                 }
             }
         }
-
-        records.addView(text(
-            "Самый прибыльный день: " + money(bestDay) + " ₽",
-            14, accent(), true
-        ));
-
+        records.addView(text("Самый прибыльный день: " + money(bestDay) + " ₽", 14, accent(), true));
         if (bestDayTime > 0) {
-            records.addView(text(
-                new SimpleDateFormat(
-                    "dd.MM.yyyy", Locale.getDefault()
-                ).format(new Date(bestDayTime)),
-                12, muted(), false
-            ));
+            records.addView(text(new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(new Date(bestDayTime)), 12, muted(), false));
         }
-
         Button resetBest = button("СБРОСИТЬ ЛУЧШИЙ ДЕНЬ", cardColor());
-        records.addView(
-            resetBest,
-            new LinearLayout.LayoutParams(-1, dp(44))
-        );
+        resetBest.setBackground(outline(cardColor(), 14, 0xFFB84040));
+        resetBest.setTextColor(0xFFEF9A9A);
+        records.addView(resetBest, new LinearLayout.LayoutParams(-1, dp(44)));
         resetBest.setOnClickListener(v -> {
-            prefs.edit()
-                .putLong("best_day_amount", 0L)
-                .putLong("best_day_time", 0L)
-                .apply();
+            prefs.edit().putLong("best_day_amount", 0L).putLong("best_day_time", 0L).apply();
             renderPage();
-            showInline("Лучший день заработка сброшен");
+            showInline("Лучший день сброшен");
         });
+
+        // Смены
+        long shiftCount = 0, bestShift = 0;
+        Cursor shifts = null;
+        try {
+            shifts = repository.getShiftsHistory();
+            if (shifts != null) {
+                int earnedColumn = shifts.getColumnIndex("earned");
+                while (shifts.moveToNext()) {
+                    shiftCount++;
+                    if (earnedColumn >= 0) bestShift = Math.max(bestShift, shifts.getLong(earnedColumn));
+                }
+            }
+        } catch (Exception ignored) {
+        } finally {
+            if (shifts != null) shifts.close();
+        }
+        LinearLayout shiftCard = card();
+        shiftCard.addView(text("СМЕНЫ", 14, fg(), true));
+        shiftCard.addView(text("Всего смен: " + shiftCount, 13, muted(), false));
+        shiftCard.addView(text("Лучшая смена: " + money(bestShift) + " ₽", 13, accent(), true));
+
+        // По дням
+        LinearLayout daysCard = card();
+        daysCard.addView(text("ПО ДНЯМ", 14, fg(), true));
+        SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault());
+        ArrayList<String> sortedDays = new ArrayList<>(allDays);
+        Collections.sort(sortedDays, Collections.reverseOrder());
+        for (String key : sortedDays) {
+            try {
+                Date parsedDay = dayKey.parse(key);
+                if (parsedDay == null) continue;
+                long dayStart = startOfDay(parsedDay.getTime());
+                long amount = daily.containsKey(key) ? daily.get(key) : 0L;
+                long count = dailyCounts.containsKey(key) ? dailyCounts.get(key) : 0L;
+
+                LinearLayout row = new LinearLayout(this);
+                row.setGravity(Gravity.CENTER_VERTICAL);
+                row.setOrientation(LinearLayout.HORIZONTAL);
+
+                LinearLayout info = new LinearLayout(this);
+                info.setOrientation(LinearLayout.VERTICAL);
+                info.addView(text(dateFormat.format(parsedDay), 13, fg(), true));
+                info.addView(text(money(amount) + " ₽  •  " + count + " кругов", 12, muted(), false));
+                row.addView(info, new LinearLayout.LayoutParams(0, -2, 1));
+
+                Button resetDay = button("СБРОС", cardColor());
+                resetDay.setBackground(outline(cardColor(), 10, 0xFFB84040));
+                resetDay.setTextColor(0xFFEF9A9A);
+                row.addView(resetDay, new LinearLayout.LayoutParams(dp(82), dp(40)));
+                resetDay.setOnClickListener(v -> showDailyResetDialog(dayStart));
+
+                LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(-1, -2);
+                rowParams.topMargin = dp(10);
+                daysCard.addView(row, rowParams);
+            } catch (Exception ignored) {
+            }
+        }
     }
 
     private int calculateStreak(HashSet<String> allDays) {
         if (allDays.isEmpty()) return 0;
-
-        SimpleDateFormat dayKey = new SimpleDateFormat(
-            "yyyyMMdd", Locale.US
-        );
-
+        SimpleDateFormat dayKey = new SimpleDateFormat("yyyyMMdd", Locale.US);
         Calendar cursor = Calendar.getInstance();
         cursor.set(Calendar.HOUR_OF_DAY, 0);
         cursor.set(Calendar.MINUTE, 0);
         cursor.set(Calendar.SECOND, 0);
         cursor.set(Calendar.MILLISECOND, 0);
-
         String todayKey = dayKey.format(cursor.getTime());
-
         if (!allDays.contains(todayKey)) {
             cursor.add(Calendar.DAY_OF_YEAR, -1);
-            if (!allDays.contains(dayKey.format(cursor.getTime()))) {
-                return 0;
-            }
+            if (!allDays.contains(dayKey.format(cursor.getTime()))) return 0;
         }
-
         int streak = 0;
-
         while (true) {
             String key = dayKey.format(cursor.getTime());
             if (allDays.contains(key)) {
                 streak++;
                 cursor.add(Calendar.DAY_OF_YEAR, -1);
-            } else {
-                break;
-            }
-
+            } else break;
             if (streak > 3650) break;
         }
-
         return streak;
     }
 
     private void showDailyResetDialog(long dayStart) {
         Calendar day = Calendar.getInstance();
         day.setTimeInMillis(dayStart);
-        String date = new SimpleDateFormat(
-            "dd.MM.yyyy", Locale.getDefault()
-        ).format(day.getTime());
+        String date = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(day.getTime());
 
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
@@ -1299,25 +1022,17 @@ public class MainActivity extends Activity {
         CheckBox earnings = new CheckBox(this);
         earnings.setText("Сбросить заработок за этот день");
         earnings.setTextColor(fg());
-        earnings.setButtonTintList(
-            ColorStateList.valueOf(accent())
-        );
+        earnings.setButtonTintList(ColorStateList.valueOf(accent()));
         box.addView(earnings);
 
         CheckBox tripsCount = new CheckBox(this);
         tripsCount.setText("Сбросить количество кругов за этот день");
         tripsCount.setTextColor(fg());
-        tripsCount.setButtonTintList(
-            ColorStateList.valueOf(accent())
-        );
+        tripsCount.setButtonTintList(ColorStateList.valueOf(accent()));
         box.addView(tripsCount);
 
         AlertDialog dialog = new AlertDialog.Builder(this)
-            .setTitle("Сброс показателей — " + date)
-            .setMessage(
-                "Выбери, какие показатели убрать из статистики. " +
-                "Записи в истории и общий баланс сохранятся."
-            )
+            .setTitle("Сброс — " + date)
             .setView(box)
             .setNegativeButton("Отмена", null)
             .setPositiveButton("Сбросить", (d, which) -> {
@@ -1325,126 +1040,67 @@ public class MainActivity extends Activity {
                     showInline("Выбери хотя бы один показатель");
                     return;
                 }
-
                 long resetAt = System.currentTimeMillis();
                 boolean success = true;
-
-                if (earnings.isChecked()) {
-                    success &= repository.saveDailyMetricReset(
-                        dayStart, "earnings", resetAt
-                    );
-                }
-
-                if (tripsCount.isChecked()) {
-                    success &= repository.saveDailyMetricReset(
-                        dayStart, "trips", resetAt
-                    );
-                }
-
+                if (earnings.isChecked()) success &= repository.saveDailyMetricReset(dayStart, "earnings", resetAt);
+                if (tripsCount.isChecked()) success &= repository.saveDailyMetricReset(dayStart, "trips", resetAt);
                 if (success) {
                     renderPage();
-                    showInline("Выбранные показатели сброшены. Баланс не изменён.");
+                    showInline("Показатели сброшены. Баланс не изменён.");
                 } else {
-                    infoDialog(
-                        "Сброс не выполнен",
-                        "Не удалось сохранить сброс показателей."
-                    );
+                    infoDialog("Сброс не выполнен", "Не удалось сохранить сброс.");
                 }
             })
             .create();
-
         showThemedDialog(dialog);
     }
 
+    // ---------------- ИСТОРИЯ ----------------
+
     private void showHistory() {
-        heading("История кругов", "Сохранённые записи рейсов");
+        heading("История", "Круги и разбивка по дням");
 
         Cursor cursor = null;
-
         HashMap<String, Long> byDayCount = new HashMap<>();
         HashMap<String, Long> byDayAmount = new HashMap<>();
-        SimpleDateFormat dayKey = new SimpleDateFormat(
-            "yyyyMMdd", Locale.US
-        );
-
+        SimpleDateFormat dayKey = new SimpleDateFormat("yyyyMMdd", Locale.US);
         long todayStart = startOfDay(System.currentTimeMillis());
-        long todayCount = 0;
-        long previousDaysCount = 0;
+        long todayCount = 0, previousDaysCount = 0;
 
         try {
             cursor = repository.getTripsHistory();
-
             if (cursor != null) {
-                int timeColumn =
-                    cursor.getColumnIndexOrThrow("created_at");
-                int amountColumn =
-                    cursor.getColumnIndexOrThrow("amount");
-
+                int timeColumn = cursor.getColumnIndexOrThrow("created_at");
+                int amountColumn = cursor.getColumnIndexOrThrow("amount");
                 while (cursor.moveToNext()) {
                     long time = cursor.getLong(timeColumn);
                     long amount = cursor.getLong(amountColumn);
-
-                    if (time >= todayStart) {
-                        todayCount++;
-                    } else {
+                    if (time >= todayStart) todayCount++;
+                    else {
                         previousDaysCount++;
-
                         Calendar d = Calendar.getInstance();
                         d.setTimeInMillis(time);
                         String key = dayKey.format(d.getTime());
-
-                        byDayCount.put(
-                            key,
-                            (byDayCount.containsKey(key)
-                                ? byDayCount.get(key) : 0L) + 1
-                        );
-                        byDayAmount.put(
-                            key,
-                            (byDayAmount.containsKey(key)
-                                ? byDayAmount.get(key) : 0L) + amount
-                        );
+                        byDayCount.put(key, (byDayCount.containsKey(key) ? byDayCount.get(key) : 0L) + 1);
+                        byDayAmount.put(key, (byDayAmount.containsKey(key) ? byDayAmount.get(key) : 0L) + amount);
                     }
                 }
-
                 cursor.moveToPosition(-1);
             }
 
             LinearLayout summary = card();
             summary.addView(text("КОЛИЧЕСТВО КРУГОВ", 12, muted(), true));
-            summary.addView(text(
-                "Сегодня: " + todayCount,
-                18, accent(), true
-            ));
+            summary.addView(text("Сегодня: " + todayCount, 20, accent(), true));
 
             final HashMap<String, Long> dayCounts = byDayCount;
             final HashMap<String, Long> dayAmounts = byDayAmount;
 
-            LinearLayout folderCard = card();
-            folderCard.addView(text(
-                "ИСТОРИЯ ПО ДНЯМ", 15, fg(), true
-            ));
-            folderCard.addView(text(
-                "Все прошлые дни: дата, сумма и количество кругов",
-                12, muted(), false
-            ));
-
-            Button openDays = button(
-                "📁  ОТКРЫТЬ ПО ДНЯМ (" + previousDaysCount + ")",
-                accent()
-            );
-            folderCard.addView(
-                openDays,
-                new LinearLayout.LayoutParams(-1, dp(48))
-            );
-            openDays.setOnClickListener(v ->
-                showDaysBreakdown(dayCounts, dayAmounts)
-            );
+            Button openDays = button("📁  ПО ДНЯМ (" + previousDaysCount + ")", accent());
+            summary.addView(openDays, new LinearLayout.LayoutParams(-1, dp(48)));
+            openDays.setOnClickListener(v -> showDaysBreakdown(dayCounts, dayAmounts));
 
             if (cursor == null || cursor.getCount() == 0) {
-                card().addView(text(
-                    "Пока нет записей. Добавь первый круг!",
-                    14, muted(), false
-                ));
+                card().addView(text("Пока нет записей. Добавь первый круг!", 14, muted(), false));
                 return;
             }
 
@@ -1454,92 +1110,45 @@ public class MainActivity extends Activity {
             int routeColumn = cursor.getColumnIndexOrThrow("route");
             int noteColumn = cursor.getColumnIndexOrThrow("note");
 
-            SimpleDateFormat fmt = new SimpleDateFormat(
-                "dd.MM.yyyy  HH:mm", Locale.getDefault()
-            );
-
+            SimpleDateFormat fmt = new SimpleDateFormat("dd.MM.yyyy  HH:mm", Locale.getDefault());
             int number = cursor.getCount();
 
             while (cursor.moveToNext()) {
                 long amount = cursor.getLong(amountColumn);
                 long time = cursor.getLong(timeColumn);
                 long duration = cursor.getLong(durationColumn);
-
                 String route = cursor.getString(routeColumn);
                 String note = cursor.getString(noteColumn);
 
                 LinearLayout c = card();
-
-                c.addView(text(
-                    "Запись №" + number, 12, muted(), true
-                ));
-
-                c.addView(text(
-                    "+" + money(amount) + " ₽",
-                    21, accent(), true
-                ));
-
-                c.addView(text(
-                    time > 0 ? fmt.format(new Date(time))
-                        : "Время неизвестно",
-                    12, fg(), false
-                ));
-
-                if (duration > 0) {
-                    c.addView(text(
-                        "Длительность: " + formatTime(duration),
-                        12, muted(), false
-                    ));
-                }
-
-                if (route != null && !route.isEmpty()) {
-                    c.addView(text(
-                        "Маршрут: " + route, 12, fg(), false
-                    ));
-                }
-
-                if (note != null && !note.isEmpty()) {
-                    c.addView(text(
-                        "Заметка: " + note, 12, muted(), false
-                    ));
-                }
-
+                c.addView(text("Запись №" + number, 11, muted(), true));
+                c.addView(text("+" + money(amount) + " ₽", 22, accent(), true));
+                c.addView(text(time > 0 ? fmt.format(new Date(time)) : "Время неизвестно", 12, fg(), false));
+                if (duration > 0) c.addView(text("Длительность: " + formatTime(duration), 12, muted(), false));
+                if (route != null && !route.isEmpty()) c.addView(text("Маршрут: " + route, 12, fg(), false));
+                if (note != null && !note.isEmpty()) c.addView(text("Заметка: " + note, 12, muted(), false));
                 number--;
             }
-
         } catch (Exception e) {
-            card().addView(text(
-                "Не удалось загрузить историю",
-                14, muted(), false
-            ));
+            card().addView(text("Не удалось загрузить историю", 14, muted(), false));
         } finally {
             if (cursor != null) cursor.close();
         }
     }
 
-    private void showDaysBreakdown(
-        HashMap<String, Long> counts,
-        HashMap<String, Long> amounts
-    ) {
+    private void showDaysBreakdown(HashMap<String, Long> counts, HashMap<String, Long> amounts) {
         if (counts.isEmpty()) {
             infoDialog("Прошлые дни", "Записей за прошлые дни нет.");
             return;
         }
-
-        SimpleDateFormat dayKey = new SimpleDateFormat(
-            "yyyyMMdd", Locale.US
-        );
-        SimpleDateFormat display = new SimpleDateFormat(
-            "dd.MM.yyyy", Locale.getDefault()
-        );
-
+        SimpleDateFormat dayKey = new SimpleDateFormat("yyyyMMdd", Locale.US);
+        SimpleDateFormat display = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault());
         ArrayList<String> keys = new ArrayList<>(counts.keySet());
         Collections.sort(keys, Collections.reverseOrder());
 
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(1);
         box.setPadding(dp(12), dp(8), dp(12), 0);
-
         ScrollView scroll = new ScrollView(this);
         scroll.addView(box);
 
@@ -1547,38 +1156,29 @@ public class MainActivity extends Activity {
             try {
                 Date d = dayKey.parse(key);
                 if (d == null) continue;
-
                 long cnt = counts.get(key) != null ? counts.get(key) : 0L;
                 long amt = amounts.get(key) != null ? amounts.get(key) : 0L;
-
                 LinearLayout row = new LinearLayout(this);
                 row.setOrientation(1);
-                row.setPadding(dp(10), dp(10), dp(10), dp(10));
+                row.setPadding(dp(12), dp(12), dp(12), dp(12));
                 row.setBackground(shape(cardColor(), 12));
-
                 row.addView(text(display.format(d), 14, fg(), true));
-                row.addView(text(
-                    money(amt) + " ₽  •  " + cnt + " кругов",
-                    12, muted(), false
-                ));
-
-                LinearLayout.LayoutParams rp =
-                    new LinearLayout.LayoutParams(-1, -2);
+                row.addView(text(money(amt) + " ₽  •  " + cnt + " кругов", 12, muted(), false));
+                LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(-1, -2);
                 rp.topMargin = dp(8);
                 box.addView(row, rp);
-
             } catch (Exception ignored) {
             }
         }
-
         AlertDialog d = new AlertDialog.Builder(this)
             .setTitle("Круги за прошлые дни")
             .setView(scroll)
             .setPositiveButton("Закрыть", null)
             .create();
-
         showThemedDialog(d);
     }
+
+    // ---------------- КАЛЬКУЛЯТОР ----------------
 
     private JSONArray getGoals() {
         try {
@@ -1593,135 +1193,62 @@ public class MainActivity extends Activity {
     }
 
     private void showCalculator() {
-        heading("Калькулятор целей", "Создавай и отслеживай свои накопления");
+        heading("Цели", "Копи и отслеживай прогресс");
 
         Button add = button("+ ДОБАВИТЬ ЦЕЛЬ", accent());
-        LinearLayout.LayoutParams ap =
-            new LinearLayout.LayoutParams(-1, dp(48));
+        LinearLayout.LayoutParams ap = new LinearLayout.LayoutParams(-1, dp(48));
         ap.topMargin = dp(12);
         content.addView(add, ap);
         add.setOnClickListener(v -> showGoalEditor(-1));
 
         JSONArray goals = getGoals();
-
         if (goals.length() == 0) {
-            card().addView(text(
-                "Пока нет пользовательских целей. Добавь первую!",
-                14, muted(), false
-            ));
+            card().addView(text("Пока нет целей. Добавь первую!", 14, muted(), false));
         }
 
         for (int i = 0; i < goals.length(); i++) {
             final int index = i;
-
             try {
                 JSONObject goal = goals.getJSONObject(i);
                 String name = goal.optString("name", "Моя цель");
                 long amount = Math.max(1L, goal.optLong("amount", 1));
                 long roundsPerDay = Math.max(1L, goal.optLong("rounds", 1));
-
                 long remaining = Math.max(0L, amount - balance);
                 long roundsNeeded = remaining / pay();
-
                 if (remaining % pay() != 0) roundsNeeded++;
-
                 long expected = safeMultiply(roundsPerDay, pay());
                 long days = roundsNeeded == 0 ? 0 :
-                    (roundsNeeded / roundsPerDay +
-                    (roundsNeeded % roundsPerDay == 0 ? 0 : 1));
-
-                double percent = Math.min(
-                    100.0,
-                    (double)balance * 100.0 / Math.max(1L, amount)
-                );
+                    (roundsNeeded / roundsPerDay + (roundsNeeded % roundsPerDay == 0 ? 0 : 1));
+                double percent = Math.min(100.0, (double)balance * 100.0 / Math.max(1L, amount));
 
                 LinearLayout c = card();
-
                 c.addView(text(name, 19, fg(), true));
-                c.addView(text(
-                    "Цель: " + money(amount) + " ₽",
-                    13, muted(), false
-                ));
+                c.addView(text("Цель: " + money(amount) + " ₽", 13, muted(), false));
+                c.addView(text("Осталось: " + money(remaining) + " ₽", 16, accent(), true));
 
-                c.addView(text(
-                    "Осталось: " + money(remaining) + " ₽",
-                    16, accent(), true
-                ));
-
-                ProgressBar bar = new ProgressBar(
-                    this, null,
-                    android.R.attr.progressBarStyleHorizontal
-                );
+                ProgressBar bar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
                 bar.setMax(100);
                 bar.setProgress((int)percent);
-                bar.setProgressTintList(
-                    ColorStateList.valueOf(accent())
-                );
-
-                LinearLayout.LayoutParams bp =
-                    new LinearLayout.LayoutParams(-1, dp(8));
+                bar.setProgressTintList(ColorStateList.valueOf(accent()));
+                LinearLayout.LayoutParams bp = new LinearLayout.LayoutParams(-1, dp(8));
                 bp.topMargin = dp(10);
                 c.addView(bar, bp);
 
-                c.addView(text(
-                    "Выполнено: " + String.format(
-                        Locale.US, "%.1f", percent
-                    ) + "%",
-                    13, fg(), false
-                ));
+                c.addView(text("Выполнено: " + String.format(Locale.US, "%.1f", percent) + "%", 13, fg(), false));
+                c.addView(text("Кругов осталось: " + roundsNeeded, 14, fg(), true));
+                c.addView(text("План: " + roundsPerDay + " кругов/день", 13, muted(), false));
+                c.addView(text("Ожидаемо в день: " + money(expected) + " ₽", 13, accent(), true));
+                c.addView(text("Дней до цели: " + days, 13, fg(), false));
 
-                c.addView(text(
-                    "Осталось процентов: " +
-                    String.format(
-                        Locale.US, "%.1f",
-                        Math.max(0, 100.0 - percent)
-                    ) + "%",
-                    13, muted(), false
-                ));
+                Button editButton = button("ИЗМЕНИТЬ", cardColor());
+                c.addView(editButton, new LinearLayout.LayoutParams(-1, dp(44)));
+                editButton.setOnClickListener(v -> showGoalEditor(index));
 
-                c.addView(text(
-                    "Кругов осталось: " + roundsNeeded,
-                    14, fg(), true
-                ));
-
-                c.addView(text(
-                    "План: " + roundsPerDay + " кругов в день",
-                    13, muted(), false
-                ));
-
-                c.addView(text(
-                    "Ожидаемый заработок в день: " +
-                    money(expected) + " ₽",
-                    13, accent(), true
-                ));
-
-                c.addView(text(
-                    "Примерно дней до цели: " + days,
-                    13, fg(), false
-                ));
-
-                Button editButton = button(
-                    "ИЗМЕНИТЬ ЦЕЛЬ", cardColor()
-                );
-                c.addView(
-                    editButton,
-                    new LinearLayout.LayoutParams(-1, dp(44))
-                );
-                editButton.setOnClickListener(
-                    v -> showGoalEditor(index)
-                );
-
-                Button deleteButton = button(
-                    "УДАЛИТЬ ЦЕЛЬ", cardColor()
-                );
-                c.addView(
-                    deleteButton,
-                    new LinearLayout.LayoutParams(-1, dp(44))
-                );
-                deleteButton.setOnClickListener(
-                    v -> confirmDeleteGoal(index)
-                );
-
+                Button deleteButton = button("УДАЛИТЬ", cardColor());
+                deleteButton.setBackground(outline(cardColor(), 14, 0xFFB84040));
+                deleteButton.setTextColor(0xFFEF9A9A);
+                c.addView(deleteButton, new LinearLayout.LayoutParams(-1, dp(44)));
+                deleteButton.setOnClickListener(v -> confirmDeleteGoal(index));
             } catch (Exception ignored) {
             }
         }
@@ -1729,11 +1256,7 @@ public class MainActivity extends Activity {
 
     private void showGoalEditor(int index) {
         JSONArray goals = getGoals();
-
-        String oldName = "";
-        String oldAmount = "";
-        String oldRounds = "5";
-
+        String oldName = "", oldAmount = "", oldRounds = "5";
         if (index >= 0 && index < goals.length()) {
             JSONObject item = goals.optJSONObject(index);
             if (item != null) {
@@ -1742,26 +1265,16 @@ public class MainActivity extends Activity {
                 oldRounds = String.valueOf(item.optLong("rounds", 5));
             }
         }
-
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(1);
         box.setPadding(dp(18), dp(8), dp(18), 0);
-
         EditText name = edit("Название цели", InputType.TYPE_CLASS_TEXT);
         name.setText(oldName);
         box.addView(name);
-
-        EditText amount = edit(
-            "Сумма цели в рублях",
-            InputType.TYPE_CLASS_NUMBER
-        );
+        EditText amount = edit("Сумма цели в рублях", InputType.TYPE_CLASS_NUMBER);
         amount.setText(oldAmount);
         box.addView(amount);
-
-        EditText rounds = edit(
-            "Кругов в день",
-            InputType.TYPE_CLASS_NUMBER
-        );
+        EditText rounds = edit("Кругов в день", InputType.TYPE_CLASS_NUMBER);
         rounds.setText(oldRounds);
         box.addView(rounds);
 
@@ -1772,40 +1285,22 @@ public class MainActivity extends Activity {
             .setPositiveButton("Сохранить", (d, w) -> {
                 try {
                     String n = name.getText().toString().trim();
-                    long a = Long.parseLong(
-                        amount.getText().toString().trim()
-                    );
-                    long r = Long.parseLong(
-                        rounds.getText().toString().trim()
-                    );
-
-                    if (n.isEmpty() || a <= 0 || r <= 0) {
-                        throw new Exception();
-                    }
-
+                    long a = Long.parseLong(amount.getText().toString().trim());
+                    long r = Long.parseLong(rounds.getText().toString().trim());
+                    if (n.isEmpty() || a <= 0 || r <= 0) throw new Exception();
                     JSONObject item = new JSONObject();
                     item.put("name", n);
                     item.put("amount", a);
                     item.put("rounds", r);
-
-                    if (index >= 0 && index < goals.length()) {
-                        goals.put(index, item);
-                    } else {
-                        goals.put(item);
-                    }
-
+                    if (index >= 0 && index < goals.length()) goals.put(index, item);
+                    else goals.put(item);
                     saveGoals(goals);
                     renderPage();
-
                 } catch (Exception e) {
-                    infoDialog(
-                        "Цель не сохранена",
-                        "Проверь название, сумму и количество кругов."
-                    );
+                    infoDialog("Цель не сохранена", "Проверь название, сумму и количество кругов.");
                 }
             })
             .create();
-
         showThemedDialog(goalEditorDialog);
     }
 
@@ -1817,97 +1312,58 @@ public class MainActivity extends Activity {
             .setPositiveButton("Удалить", (d, w) -> {
                 JSONArray old = getGoals();
                 JSONArray updated = new JSONArray();
-
-                for (int i = 0; i < old.length(); i++) {
-                    if (i != index) updated.put(old.opt(i));
-                }
-
+                for (int i = 0; i < old.length(); i++) if (i != index) updated.put(old.opt(i));
                 saveGoals(updated);
                 renderPage();
             })
             .create();
-
         showThemedDialog(deleteGoalDialog);
     }
 
+    // ---------------- ГРАФИКИ ----------------
+
     private void showCharts() {
-        heading(
-            "Графики заработка",
-            "Сумма, дата и день недели за последние 7 дней"
-        );
-
+        heading("Графики", "Заработок за 7 дней");
         LinearLayout c = card();
-        c.addView(
-            new EarningsChart(this),
-            new LinearLayout.LayoutParams(-1, dp(270))
-        );
-
+        c.addView(new EarningsChart(this), new LinearLayout.LayoutParams(-1, dp(270)));
         LinearLayout info = card();
-        info.addView(text(
-            "Данные берутся из сохранённой истории рейсов.",
-            13, muted(), false
-        ));
+        info.addView(text("Источник: сохранённая история рейсов.", 13, muted(), false));
     }
 
     private class EarningsChart extends View {
-
         Paint paint = new Paint(3);
-
-        EarningsChart(Context c) {
-            super(c);
-        }
+        EarningsChart(Context c) { super(c); }
 
         @Override
         protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
-
-            int w = getWidth();
-            int h = getHeight();
-
+            int w = getWidth(), h = getHeight();
             long[] values = new long[7];
             Calendar today = Calendar.getInstance();
-
             today.set(Calendar.HOUR_OF_DAY, 0);
             today.set(Calendar.MINUTE, 0);
             today.set(Calendar.SECOND, 0);
             today.set(Calendar.MILLISECOND, 0);
-
             Calendar[] days = new Calendar[7];
-
             for (int i = 0; i < 7; i++) {
                 days[i] = (Calendar)today.clone();
                 days[i].add(Calendar.DAY_OF_YEAR, i - 6);
             }
-
             Cursor cursor = null;
-
             try {
                 cursor = repository.getTripsHistory();
-
                 if (cursor != null) {
-                    int timeColumn =
-                        cursor.getColumnIndexOrThrow("created_at");
-                    int amountColumn =
-                        cursor.getColumnIndexOrThrow("amount");
-
+                    int timeColumn = cursor.getColumnIndexOrThrow("created_at");
+                    int amountColumn = cursor.getColumnIndexOrThrow("amount");
                     while (cursor.moveToNext()) {
                         long time = cursor.getLong(timeColumn);
                         long amount = cursor.getLong(amountColumn);
-
                         for (int i = 0; i < 7; i++) {
                             Calendar next = (Calendar)days[i].clone();
                             next.add(Calendar.DAY_OF_YEAR, 1);
-
-                            if (time >= days[i].getTimeInMillis() &&
-                                time < next.getTimeInMillis()) {
-                                long resetAt = repository.getDailyMetricReset(
-                                    days[i].getTimeInMillis(),
-                                    "earnings"
-                                );
-
-                                if (resetAt <= 0 || time >= resetAt) {
-                                    values[i] = safeAdd(values[i], amount);
-                                }
+                            if (time >= days[i].getTimeInMillis() && time < next.getTimeInMillis()) {
+                                long resetAt = repository.getDailyMetricReset(days[i].getTimeInMillis(), "earnings");
+                                if (resetAt <= 0 || time >= resetAt) values[i] = safeAdd(values[i], amount);
                                 break;
                             }
                         }
@@ -1917,134 +1373,71 @@ public class MainActivity extends Activity {
             } finally {
                 if (cursor != null) cursor.close();
             }
-
             long max = 1;
-            for (long value : values) {
-                max = Math.max(max, value);
-            }
-
-            float leftPad = dp(8);
-            float gap = dp(7);
+            for (long value : values) max = Math.max(max, value);
+            float leftPad = dp(8), gap = dp(7);
             float barW = (w - dp(16) - gap * 6) / 7f;
-            float base = h - dp(48);
-            float maxHeight = h - dp(105);
-
+            float base = h - dp(48), maxHeight = h - dp(105);
             paint.setColor(muted());
             paint.setStrokeWidth(dp(1));
-            canvas.drawLine(
-                dp(5), base, w - dp(5), base, paint
-            );
-
-            SimpleDateFormat dateFormat = new SimpleDateFormat(
-                "dd.MM", Locale.getDefault()
-            );
-            SimpleDateFormat dayFormat = new SimpleDateFormat(
-                "EE", Locale.getDefault()
-            );
-
+            canvas.drawLine(dp(5), base, w - dp(5), base, paint);
+            SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM", Locale.getDefault());
+            SimpleDateFormat dayFormat = new SimpleDateFormat("EE", Locale.getDefault());
             for (int i = 0; i < 7; i++) {
                 float left = leftPad + i * (barW + gap);
-                float bh = (float)(
-                    ((double)values[i] / (double)max) * maxHeight
-                );
-
+                float bh = (float)(((double)values[i] / (double)max) * maxHeight);
                 paint.setColor(accent());
-                canvas.drawRoundRect(
-                    left, base - bh, left + barW, base,
-                    dp(5), dp(5), paint
-                );
-
+                canvas.drawRoundRect(left, base - bh, left + barW, base, dp(5), dp(5), paint);
                 paint.setColor(fg());
                 paint.setTextSize(dp(9));
                 paint.setTextAlign(Paint.Align.CENTER);
-
-                String amount = values[i] > 0
-                    ? compactMoney(values[i])
-                    : "0";
-
-                canvas.drawText(
-                    amount,
-                    left + barW / 2,
-                    Math.max(dp(12), base - bh - dp(5)),
-                    paint
-                );
-
+                String amount = values[i] > 0 ? compactMoney(values[i]) : "0";
+                canvas.drawText(amount, left + barW / 2, Math.max(dp(12), base - bh - dp(5)), paint);
                 paint.setTextSize(dp(9));
-                canvas.drawText(
-                    dayFormat.format(days[i].getTime()),
-                    left + barW / 2,
-                    h - dp(27),
-                    paint
-                );
-
-                canvas.drawText(
-                    dateFormat.format(days[i].getTime()),
-                    left + barW / 2,
-                    h - dp(10),
-                    paint
-                );
+                canvas.drawText(dayFormat.format(days[i].getTime()), left + barW / 2, h - dp(27), paint);
+                canvas.drawText(dateFormat.format(days[i].getTime()), left + barW / 2, h - dp(10), paint);
             }
-
             paint.setTextAlign(Paint.Align.LEFT);
         }
     }
 
     private String compactMoney(long value) {
-        if (value >= 1000000) {
-            return String.format(
-                Locale.US, "%.1fм", value / 1000000.0
-            );
-        }
-        if (value >= 1000) {
-            return String.format(
-                Locale.US, "%.0fк", value / 1000.0
-            );
-        }
+        if (value >= 1000000) return String.format(Locale.US, "%.1fм", value / 1000000.0);
+        if (value >= 1000) return String.format(Locale.US, "%.0fк", value / 1000.0);
         return String.valueOf(value);
     }
 
+    // ---------------- ТЕМЫ ----------------
+
     private void showThemes() {
-        heading(
-            "Оформление",
-            "Выбери цветовую тему приложения"
-        );
+        heading("Оформление", "Цветовая тема приложения");
 
         String[] names = {
-            "Фиолетовая", "Светлая", "Чёрная", "Красная",
-            "Зелёная", "Жёлтая", "Синяя", "Голубая",
-            "Розовая", "Оранжевая"
+            "Неон", "Индиго", "Циан", "Красная",
+            "Зелёная", "Золото", "Синяя", "Бирюза",
+            "Розовая", "Оранж"
         };
 
         for (int i = 0; i < names.length; i++) {
             final int index = i;
-
             LinearLayout row = new LinearLayout(this);
             row.setGravity(Gravity.CENTER_VERTICAL);
-            row.setPadding(dp(12), dp(10), dp(12), dp(10));
-            row.setBackground(shape(cardColor(), 14));
-
-            LinearLayout.LayoutParams rp =
-                new LinearLayout.LayoutParams(-1, dp(56));
-            rp.topMargin = dp(7);
+            row.setPadding(dp(14), dp(12), dp(14), dp(12));
+            row.setBackground(shape(cardColor(), 16));
+            LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(-1, dp(58));
+            rp.topMargin = dp(8);
             content.addView(row, rp);
 
             View swatch = new View(this);
             swatch.setBackground(shape(accents[i], 30));
-            row.addView(
-                swatch,
-                new LinearLayout.LayoutParams(dp(30), dp(30))
-            );
+            row.addView(swatch, new LinearLayout.LayoutParams(dp(32), dp(32)));
 
             TextView name = text(names[i], 15, fg(), true);
-            LinearLayout.LayoutParams np =
-                new LinearLayout.LayoutParams(0, -2, 1);
-            np.leftMargin = dp(12);
+            LinearLayout.LayoutParams np = new LinearLayout.LayoutParams(0, -2, 1);
+            np.leftMargin = dp(14);
             row.addView(name, np);
 
-            TextView selected = text(
-                prefs.getInt("theme", 0) == i ? "✓" : "›",
-                22, accents[i], true
-            );
+            TextView selected = text(prefs.getInt("theme", 0) == i ? "✓" : "›", 22, accents[i], true);
             row.addView(selected);
 
             row.setOnClickListener(v -> {
@@ -2054,142 +1447,68 @@ public class MainActivity extends Activity {
         }
     }
 
+    // ---------------- НАСТРОЙКИ / ЕЩЁ ----------------
+
     private void showSettings() {
-        heading(
-            "Настройки",
-            "Управление приложением и внешним видом"
-        );
+        heading("Ещё", "Настройки и разделы");
+
+        // Быстрые переходы
+        LinearLayout quick = card();
+        quick.addView(text("БЫСТРЫЕ ПЕРЕХОДЫ", 12, muted(), true));
+
+        Button toCalc = button("◎  Калькулятор целей", cardColor());
+        quick.addView(toCalc, new LinearLayout.LayoutParams(-1, dp(46)));
+        toCalc.setOnClickListener(v -> { morePage = "calculator"; page = "calculator"; rebuildBottomNav(); renderPage(); });
+
+        Button toCharts = button("▤  Графики заработка", cardColor());
+        quick.addView(toCharts, new LinearLayout.LayoutParams(-1, dp(46)));
+        toCharts.setOnClickListener(v -> { morePage = "charts"; page = "charts"; rebuildBottomNav(); renderPage(); });
+
+        Button toThemes = button("🎨  Оформление", cardColor());
+        quick.addView(toThemes, new LinearLayout.LayoutParams(-1, dp(46)));
+        toThemes.setOnClickListener(v -> { morePage = "theme"; page = "theme"; rebuildBottomNav(); renderPage(); });
 
         LinearLayout sound = card();
-        sound.addView(text("ЗВУК И ВИБРАЦИЯ", 14, fg(), true));
-
-        addSwitch(sound, "Звуки приложения", "sound_enabled", true);
+        sound.addView(text("ЗВУК И ВИБРАЦИЯ", 12, muted(), true));
+        addSwitch(sound, "Звуки", "sound_enabled", true);
         addSwitch(sound, "Вибрация", "vibration_enabled", true);
         addSwitch(sound, "Тихий режим", "silent_mode", false);
-
-        addSeekBar(sound, "Громкость звуков", "sound_volume", 0, 100, 70);
+        addSeekBar(sound, "Громкость", "sound_volume", 0, 100, 70);
 
         LinearLayout panel = card();
-        panel.addView(text("ПЛАВАЮЩАЯ ПАНЕЛЬ", 14, fg(), true));
-
-        addSeekBar(
-            panel, "Размер панели", "panel_size",
-            70, 130, 100
-        );
-
-        addSeekBar(
-            panel, "Прозрачность панели", "panel_opacity",
-            30, 100, 100
-        );
-
-        addSwitch(
-            panel,
-            "Показывать панель поверх игры",
-            "panel_enabled",
-            false
-        );
-
-        Button themes = button("ПЕРЕЙТИ К ОФОРМЛЕНИЮ", accent());
-        panel.addView(
-            themes,
-            new LinearLayout.LayoutParams(-1, dp(46))
-        );
-        themes.setOnClickListener(v -> {
-            page = "theme";
-            renderPage();
-        });
+        panel.addView(text("ПЛАВАЮЩАЯ ПАНЕЛЬ", 12, muted(), true));
+        addSeekBar(panel, "Размер", "panel_size", 70, 130, 100);
+        addSeekBar(panel, "Прозрачность", "panel_opacity", 30, 100, 100);
+        addSwitch(panel, "Показывать панель", "panel_enabled", false);
 
         LinearLayout currency = card();
-        currency.addView(text("ВАЛЮТА И ФОРМАТ", 14, fg(), true));
-        addSwitch(
-            currency,
-            "Компактный формат сумм (к, м)",
-            "currency_compact",
-            false
-        );
+        currency.addView(text("ФОРМАТ", 12, muted(), true));
+        addSwitch(currency, "Компактные суммы (к, м)", "currency_compact", false);
 
-        LinearLayout notifications = card();
-        notifications.addView(text(
-            "УВЕДОМЛЕНИЯ", 14, fg(), true
-        ));
-
-        addSwitch(
-            notifications,
-            "Показывать уведомления",
-            "notifications_enabled",
-            true
-        );
-
-        addSwitch(
-            notifications,
-            "Уведомление о завершении рейса",
-            "trip_finish_notifications",
-            true
-        );
-
-        addSwitch(
-            notifications,
-            "Уведомление о начале смены",
-            "shift_start_notifications",
-            false
-        );
+        LinearLayout notif = card();
+        notif.addView(text("УВЕДОМЛЕНИЯ", 12, muted(), true));
+        addSwitch(notif, "Показывать", "notifications_enabled", true);
+        addSwitch(notif, "О завершении рейса", "trip_finish_notifications", true);
+        addSwitch(notif, "О начале смены", "shift_start_notifications", false);
 
         LinearLayout home = card();
-        home.addView(text(
-            "ГЛАВНЫЙ ЭКРАН", 14, fg(), true
-        ));
-
-        Button customize = button(
-            "НАСТРОИТЬ БЛОКИ ГЛАВНОГО ЭКРАНА",
-            accent()
-        );
-
-        home.addView(
-            customize,
-            new LinearLayout.LayoutParams(-1, dp(48))
-        );
-
+        home.addView(text("ГЛАВНЫЙ ЭКРАН", 12, muted(), true));
+        Button customize = button("НАСТРОИТЬ БЛОКИ", accent());
+        home.addView(customize, new LinearLayout.LayoutParams(-1, dp(48)));
         customize.setOnClickListener(v -> showHomeCustomization());
 
         LinearLayout backup = card();
-        backup.addView(text("ДАННЫЕ", 14, fg(), true));
-        backup.addView(text(
-            "Экспорт копирует статистику в буфер обмена " +
-            "в текстовом виде.",
-            12, muted(), false
-        ));
-
-        Button exportButton = button(
-            "ЭКСПОРТ ДАННЫХ",
-            cardColor()
-        );
-        backup.addView(
-            exportButton,
-            new LinearLayout.LayoutParams(-1, dp(46))
-        );
+        backup.addView(text("ДАННЫЕ", 12, muted(), true));
+        Button exportButton = button("ЭКСПОРТ", cardColor());
+        backup.addView(exportButton, new LinearLayout.LayoutParams(-1, dp(46)));
         exportButton.setOnClickListener(v -> exportData());
 
         LinearLayout reset = card();
-        reset.addView(text(
-            "СБРОС НАСТРОЕК", 14, fg(), true
-        ));
-
-        reset.addView(text(
-            "Вернуть стандартные параметры приложения. " +
-            "Статистика и история рейсов останутся без изменений.",
-            13, muted(), false
-        ));
-
-        Button resetButton = button(
-            "СБРОСИТЬ НАСТРОЙКИ",
-            cardColor()
-        );
-
-        reset.addView(
-            resetButton,
-            new LinearLayout.LayoutParams(-1, dp(46))
-        );
-
+        reset.addView(text("СБРОС", 12, muted(), true));
+        Button resetButton = button("СБРОСИТЬ НАСТРОЙКИ", cardColor());
+        resetButton.setBackground(outline(cardColor(), 14, 0xFFB84040));
+        resetButton.setTextColor(0xFFEF9A9A);
+        reset.addView(resetButton, new LinearLayout.LayoutParams(-1, dp(46)));
         resetButton.setOnClickListener(v -> confirmSettingsReset());
     }
 
@@ -2242,127 +1561,56 @@ public class MainActivity extends Activity {
             }
             data.put("trips_history", tripArray.toString());
 
-            android.content.ClipboardManager cm =
-                (android.content.ClipboardManager)getSystemService(
-                    Context.CLIPBOARD_SERVICE
-                );
-            cm.setPrimaryClip(
-                android.content.ClipData.newPlainText(
-                    "TruckLog Export", data.toString(2)
-                )
-            );
-
-            infoDialog(
-                "Экспорт готов",
-                "Копия статистики скопирована в буфер обмена. " +
-                "Вставь её в заметки или сообщение, чтобы сохранить."
-            );
+            android.content.ClipboardManager cm = (android.content.ClipboardManager)getSystemService(Context.CLIPBOARD_SERVICE);
+            cm.setPrimaryClip(android.content.ClipData.newPlainText("TruckLog Export", data.toString(2)));
+            infoDialog("Экспорт готов", "Копия статистики скопирована в буфер обмена.");
         } catch (Exception e) {
-            infoDialog(
-                "Экспорт не выполнен",
-                "Не удалось сформировать копию данных."
-            );
+            infoDialog("Экспорт не выполнен", "Не удалось сформировать копию данных.");
         }
     }
 
-    private void addSwitch(
-        LinearLayout parent,
-        String title,
-        String key,
-        boolean defaultValue
-    ) {
+    private void addSwitch(LinearLayout parent, String title, String key, boolean defaultValue) {
         Switch sw = new Switch(this);
         sw.setText(title);
         sw.setTextColor(fg());
         sw.setTextSize(14);
         sw.setChecked(prefs.getBoolean(key, defaultValue));
-
         sw.setOnCheckedChangeListener((button, checked) -> {
-            if ("panel_enabled".equals(key)) {
-                setOverlayEnabled(checked);
-            } else {
-                prefs.edit().putBoolean(key, checked).apply();
-            }
+            if ("panel_enabled".equals(key)) setOverlayEnabled(checked);
+            else prefs.edit().putBoolean(key, checked).apply();
         });
-
-        LinearLayout.LayoutParams p =
-            new LinearLayout.LayoutParams(-1, dp(48));
-        parent.addView(sw, p);
+        parent.addView(sw, new LinearLayout.LayoutParams(-1, dp(48)));
     }
 
-    private void addSeekBar(
-        LinearLayout parent,
-        String title,
-        String key,
-        int min,
-        int max,
-        int defaultValue
-    ) {
-        TextView label = text(
-            title + ": " + prefs.getInt(key, defaultValue),
-            13, fg(), true
-        );
-
+    private void addSeekBar(LinearLayout parent, String title, String key, int min, int max, int defaultValue) {
+        TextView label = text(title + ": " + prefs.getInt(key, defaultValue), 13, fg(), true);
         parent.addView(label);
-
         SeekBar seek = new SeekBar(this);
         seek.setMax(max - min);
-        seek.setProgress(
-            Math.max(0, Math.min(
-                max - min,
-                prefs.getInt(key, defaultValue) - min
-            ))
-        );
-
-        seek.setProgressTintList(
-            ColorStateList.valueOf(accent())
-        );
-
-        seek.setOnSeekBarChangeListener(
-            new SeekBar.OnSeekBarChangeListener() {
-                @Override
-                public void onProgressChanged(
-                    SeekBar bar, int progress, boolean fromUser
-                ) {
-                    int value = min + progress;
-                    label.setText(title + ": " + value);
-
-                    if (fromUser) {
-                        prefs.edit().putInt(key, value).apply();
-                    }
-                }
-
-                @Override
-                public void onStartTrackingTouch(SeekBar bar) {}
-
-                @Override
-                public void onStopTrackingTouch(SeekBar bar) {}
+        seek.setProgress(Math.max(0, Math.min(max - min, prefs.getInt(key, defaultValue) - min)));
+        seek.setProgressTintList(ColorStateList.valueOf(accent()));
+        seek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override public void onProgressChanged(SeekBar bar, int progress, boolean fromUser) {
+                int value = min + progress;
+                label.setText(title + ": " + value);
+                if (fromUser) prefs.edit().putInt(key, value).apply();
             }
-        );
-
+            @Override public void onStartTrackingTouch(SeekBar bar) {}
+            @Override public void onStopTrackingTouch(SeekBar bar) {}
+        });
         parent.addView(seek);
     }
 
     private void confirmSettingsReset() {
         AlertDialog dialog = new AlertDialog.Builder(this)
             .setTitle("Сбросить настройки?")
-            .setMessage(
-                "Тема, настройки панели, звука, вибрации, " +
-                "уведомлений и главного экрана вернутся к стандартным. " +
-                "Заработок, статистика, цели и история рейсов " +
-                "останутся без изменений. Плавающая панель будет выключена."
-            )
+            .setMessage("Тема, настройки панели, звука, вибрации, уведомлений и главного экрана вернутся к стандартным. Статистика и история останутся.")
             .setNegativeButton("Отмена", null)
             .setPositiveButton("Сбросить", (d, w) -> {
-                stopService(
-                    new Intent(this, FloatingPanelService.class)
-                );
-
+                stopService(new Intent(this, FloatingPanelService.class));
                 SharedPreferences.Editor e = prefs.edit();
-
                 e.putInt("theme", 0);
                 e.putBoolean("panel_enabled", false);
-
                 e.remove("sound_enabled");
                 e.remove("sound_volume");
                 e.remove("vibration_enabled");
@@ -2373,22 +1621,17 @@ public class MainActivity extends Activity {
                 e.remove("notifications_enabled");
                 e.remove("trip_finish_notifications");
                 e.remove("shift_start_notifications");
-
                 e.remove("home_block_balance");
                 e.remove("home_block_rounds");
                 e.remove("home_block_payout");
                 e.remove("home_block_timer");
                 e.remove("home_block_overlay");
                 e.remove("home_block_order");
-
                 e.apply();
-
                 renderPage();
-
                 showInline("Настройки сброшены");
             })
             .create();
-
         showThemedDialog(dialog);
     }
 
@@ -2396,54 +1639,35 @@ public class MainActivity extends Activity {
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(1);
         box.setPadding(dp(18), dp(8), dp(18), 0);
-
         CheckBox[] checks = new CheckBox[blockKeys.length];
-
         for (int i = 0; i < blockKeys.length; i++) {
             checks[i] = new CheckBox(this);
             checks[i].setText(blockNames[i]);
             checks[i].setTextColor(fg());
-            checks[i].setButtonTintList(
-                ColorStateList.valueOf(accent())
-            );
+            checks[i].setButtonTintList(ColorStateList.valueOf(accent()));
             checks[i].setChecked(blockVisible(blockKeys[i]));
             box.addView(checks[i]);
         }
-
         AlertDialog homeCustomizationDialog = new AlertDialog.Builder(this)
             .setTitle("Блоки главного экрана")
             .setView(box)
             .setNegativeButton("Отмена", null)
             .setPositiveButton("Сохранить", (d, w) -> {
                 SharedPreferences.Editor e = prefs.edit();
-
                 for (int i = 0; i < blockKeys.length; i++) {
-                    e.putBoolean(
-                        "home_block_" + blockKeys[i],
-                        checks[i].isChecked()
-                    );
+                    e.putBoolean("home_block_" + blockKeys[i], checks[i].isChecked());
                 }
-
                 e.apply();
-
                 renderPage();
-
                 showInline("Главный экран обновлён");
             })
             .create();
-
         showThemedDialog(homeCustomizationDialog);
     }
 
     private long safeAdd(long a, long b) {
-        if (b > 0 && a > Long.MAX_VALUE - b) {
-            return Long.MAX_VALUE;
-        }
-
-        if (b < 0 && a < Long.MIN_VALUE - b) {
-            return Long.MIN_VALUE;
-        }
-
+        if (b > 0 && a > Long.MAX_VALUE - b) return Long.MAX_VALUE;
+        if (b < 0 && a < Long.MIN_VALUE - b) return Long.MIN_VALUE;
         return a + b;
     }
 
@@ -2454,61 +1678,28 @@ public class MainActivity extends Activity {
     }
 
     private String formatTime(long sec) {
-        return String.format(
-            Locale.US,
-            "%02d:%02d:%02d",
-            sec / 3600,
-            (sec % 3600) / 60,
-            sec % 60
-        );
+        return String.format(Locale.US, "%02d:%02d:%02d", sec / 3600, (sec % 3600) / 60, sec % 60);
     }
 
     private void setOverlayEnabled(boolean enabled) {
         if (enabled) {
-            if (Build.VERSION.SDK_INT >= 23 &&
-                !Settings.canDrawOverlays(this)) {
-
-                infoDialog(
-                    "Разрешение",
-                    "Разреши отображение поверх других окон, " +
-                    "затем включи панель снова."
-                );
-
-                Intent i = new Intent(
-                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                    android.net.Uri.parse("package:" + getPackageName())
-                );
-
+            if (Build.VERSION.SDK_INT >= 23 && !Settings.canDrawOverlays(this)) {
+                infoDialog("Разрешение", "Разреши отображение поверх других окон, затем включи панель снова.");
+                Intent i = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    android.net.Uri.parse("package:" + getPackageName()));
                 startActivity(i);
                 return;
             }
-
             try {
-                startService(
-                    new Intent(this, FloatingPanelService.class)
-                );
-
-                prefs.edit()
-                    .putBoolean("panel_enabled", true)
-                    .apply();
-
+                startService(new Intent(this, FloatingPanelService.class));
+                prefs.edit().putBoolean("panel_enabled", true).apply();
             } catch (Exception e) {
-                infoDialog(
-                    "Панель не включена",
-                    "Не удалось включить плавающую панель."
-                );
+                infoDialog("Панель не включена", "Не удалось включить плавающую панель.");
             }
-
         } else {
-            stopService(
-                new Intent(this, FloatingPanelService.class)
-            );
-
-            prefs.edit()
-                .putBoolean("panel_enabled", false)
-                .apply();
+            stopService(new Intent(this, FloatingPanelService.class));
+            prefs.edit().putBoolean("panel_enabled", false).apply();
         }
-
         renderPage();
     }
 
@@ -2520,10 +1711,8 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-
         syncData();
         renderPage();
-
         if (running) {
             handler.removeCallbacks(ticker);
             handler.post(ticker);
@@ -2533,11 +1722,9 @@ public class MainActivity extends Activity {
     @Override
     protected void onDestroy() {
         handler.removeCallbacks(ticker);
-
         if (prefs != null && listener != null) {
             prefs.unregisterOnSharedPreferenceChangeListener(listener);
         }
-
         super.onDestroy();
     }
-                                }
+                                      }
