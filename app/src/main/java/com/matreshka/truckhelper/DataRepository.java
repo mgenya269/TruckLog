@@ -240,6 +240,49 @@ public final class DataRepository {
         return database.resetShift(shiftStartedAt);
     }
 
+    // ---------------- СБРОС МЕТРИК ПО ДНЯМ ----------------
+
+    /**
+     * Возвращает момент (timestamp), с которого считается заработок/круги
+     * для указанного дня и метрики. 0 — если сброса не было.
+     *
+     * metric: "earnings" или "trips".
+     * Хранение — в SharedPreferences (без изменения схемы БД).
+     */
+    public synchronized long getDailyMetricReset(
+            long dayStart,
+            String metric
+    ) {
+        if (metric == null || dayStart <= 0) return 0L;
+
+        return prefs.getLong(
+                "daily_reset_" + metric + "_" + dayStart,
+                0L
+        );
+    }
+
+    /**
+     * Сохраняет момент сброса для дня и метрики.
+     *
+     * metric: "earnings" или "trips".
+     */
+    public synchronized boolean saveDailyMetricReset(
+            long dayStart,
+            String metric,
+            long resetAt
+    ) {
+        if (metric == null || dayStart <= 0 || resetAt <= 0) {
+            return false;
+        }
+
+        return prefs.getPreferences().edit()
+                .putLong(
+                        "daily_reset_" + metric + "_" + dayStart,
+                        resetAt
+                )
+                .commit();
+    }
+
     public synchronized Cursor getTripsHistory() {
         return database.getTrips();
     }
