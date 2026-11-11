@@ -85,6 +85,11 @@ public class MainActivity extends Activity {
         0xFFD08FB5, 0xFFD0A58F
     };
 
+    @Override
+    protected void attachBaseContext(Context base) {
+        super.attachBaseContext(LocaleHelper.onAttach(base));
+    }
+
     private int theme() { return Math.max(0, Math.min(9, prefs.getInt("theme", 0))); }
     private int accent() { return accents[theme()]; }
     private int background() { return backgrounds[theme()]; }
@@ -179,12 +184,12 @@ public class MainActivity extends Activity {
     private void infoDialog(String title, String message) {
         AlertDialog d = new AlertDialog.Builder(this)
             .setTitle(title).setMessage(message)
-            .setPositiveButton("ОК", null).create();
+            .setPositiveButton(R.string.ok, null).create();
         showThemedDialog(d);
     }
 
     private void showInline(String message) {
-        if (inlineMessage == null) { infoDialog("TruckLog", message); return; }
+        if (inlineMessage == null) { infoDialog(getString(R.string.app_name), message); return; }
         inlineMessage.setText(message);
         inlineMessage.setVisibility(View.VISIBLE);
         handler.postDelayed(() -> {
@@ -264,7 +269,7 @@ public class MainActivity extends Activity {
         prefs = getSharedPreferences("truck_stats", MODE_PRIVATE);
         repository = DataRepository.getInstance(this);
         if (!repository.initialize()) {
-            infoDialog("История", "Не удалось перенести историю. Старые данные сохранены.");
+            infoDialog(getString(R.string.history_title), getString(R.string.history_deleted_error));
         }
         listener = (p, key) -> {
             if (key == null) return;
@@ -297,8 +302,8 @@ public class MainActivity extends Activity {
 
         LinearLayout labels = new LinearLayout(this);
         labels.setOrientation(1);
-        labels.addView(text("TRUCKLOG", 22, fg(), true));
-        labels.addView(text("Бортовой компьютер", 12, muted(), false));
+        labels.addView(text(getString(R.string.app_name).toUpperCase(), 22, fg(), true));
+        labels.addView(text(getString(R.string.app_subtitle), 12, muted(), false));
         header.addView(labels, new LinearLayout.LayoutParams(0, -2, 1));
 
         TextView balanceChip = text(money(balance) + " ₽", 13, accent(), true);
@@ -328,11 +333,11 @@ public class MainActivity extends Activity {
         bottomNav.setGravity(Gravity.CENTER);
         bottomNav.setMinimumHeight(dp(60));
 
-        addNavItem("⌂", "Главная", "home");
-        addNavItem("▦", "Стата", "stats");
-        addNavItem("◷", "История", "history");
-        addNavItem("◎", "Цели", "calculator");
-        addNavItem("⚙", "Ещё", "settings");
+        addNavItem("⌂", getString(R.string.nav_home), "home");
+        addNavItem("▦", getString(R.string.nav_stats), "stats");
+        addNavItem("◷", getString(R.string.nav_history), "history");
+        addNavItem("◎", getString(R.string.nav_goals), "calculator");
+        addNavItem("⚙", getString(R.string.nav_more), "settings");
 
         root.addView(bottomNav, new LinearLayout.LayoutParams(-1, -2));
 
@@ -395,11 +400,11 @@ public class MainActivity extends Activity {
     private void rebuildBottomNav() {
         if (bottomNav == null) return;
         bottomNav.removeAllViews();
-        addNavItem("⌂", "Главная", "home");
-        addNavItem("▦", "Стата", "stats");
-        addNavItem("◷", "История", "history");
-        addNavItem("◎", "Цели", "calculator");
-        addNavItem("⚙", "Ещё", "settings");
+        addNavItem("⌂", getString(R.string.nav_home), "home");
+        addNavItem("▦", getString(R.string.nav_stats), "stats");
+        addNavItem("◷", getString(R.string.nav_history), "history");
+        addNavItem("◎", getString(R.string.nav_goals), "calculator");
+        addNavItem("⚙", getString(R.string.nav_more), "settings");
     }
 
     private void rebuildBase() {
@@ -454,14 +459,14 @@ public class MainActivity extends Activity {
         heroParams.topMargin = dp(8);
         content.addView(hero, heroParams);
 
-        hero.addView(text("ТЕКУЩИЙ БАЛАНС", 12, muted(), true));
+        hero.addView(text(getString(R.string.current_balance), 12, muted(), true));
         TextView balanceView = text(money(balance) + " ₽", 40, fg(), true);
         LinearLayout.LayoutParams bv = new LinearLayout.LayoutParams(-1, -2);
         bv.topMargin = dp(6);
         hero.addView(balanceView, bv);
 
         long remain = Math.max(0L, goal() - balance);
-        hero.addView(text("До цели: " + money(remain) + " ₽", 13, accent(), true));
+        hero.addView(text(getString(R.string.until_goal, money(remain)), 13, accent(), true));
 
         ProgressBar bar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
         bar.setMax(100);
@@ -478,13 +483,13 @@ public class MainActivity extends Activity {
         content.addView(tiles, tp);
 
         if (blockVisible("rounds")) {
-            LinearLayout t1 = miniTile("КРУГИ", String.valueOf(trips), accent());
+            LinearLayout t1 = miniTile(getString(R.string.rounds_tile), String.valueOf(trips), accent());
             LinearLayout.LayoutParams lp1 = new LinearLayout.LayoutParams(0, -2, 1);
             lp1.rightMargin = dp(6);
             tiles.addView(t1, lp1);
         }
         if (blockVisible("payout")) {
-            LinearLayout t2 = miniTile("ВЫПЛАТА", money(pay()) + " ₽", fg());
+            LinearLayout t2 = miniTile(getString(R.string.payout_tile), money(pay()) + " ₽", fg());
             LinearLayout.LayoutParams lp2 = new LinearLayout.LayoutParams(0, -2, 1);
             lp2.leftMargin = dp(6);
             tiles.addView(t2, lp2);
@@ -492,11 +497,12 @@ public class MainActivity extends Activity {
 
         if (blockVisible("timer")) {
             LinearLayout timerCard = card();
-            timerCard.addView(text("ТЕКУЩИЙ РЕЙС", 12, muted(), true));
+            timerCard.addView(text(getString(R.string.current_trip), 12, muted(), true));
             timerView = text(running ? formatTime((System.currentTimeMillis() - startAt) / 1000) : "00:00:00", 34, fg(), true);
             timerCard.addView(timerView);
             timerCard.addView(text(
-                running ? "Рейс идёт" : (isShiftStarted() ? "Смена активна" : "Смена не начата"),
+                running ? getString(R.string.trip_running)
+                        : (isShiftStarted() ? getString(R.string.shift_active) : getString(R.string.shift_not_started)),
                 12, muted(), false
             ));
         } else {
@@ -505,24 +511,24 @@ public class MainActivity extends Activity {
 
         Button main;
         if (!isShiftStarted()) {
-            main = button("НАЧАТЬ СМЕНУ", accent());
+            main = button(getString(R.string.start_shift), accent());
             main.setOnClickListener(v -> startTrip());
         } else {
-            main = button("СДЕЛАЛ КРУГ  +" + money(pay()) + " ₽", accent());
+            main = button(getString(R.string.make_round, money(pay())), accent());
             main.setOnClickListener(v -> finishTrip());
         }
         LinearLayout.LayoutParams mp = new LinearLayout.LayoutParams(-1, dp(58));
         mp.topMargin = dp(14);
         content.addView(main, mp);
 
-        Button finishShift = button("ЗАВЕРШИТЬ СМЕНУ", cardColor());
+        Button finishShift = button(getString(R.string.finish_shift), cardColor());
         finishShift.setBackground(outline(cardColor(), 14, accent()));
         LinearLayout.LayoutParams sp = new LinearLayout.LayoutParams(-1, dp(52));
         sp.topMargin = dp(8);
         content.addView(finishShift, sp);
         finishShift.setOnClickListener(v -> confirmFinishShift());
 
-        Button resetStats = button("СБРОСИТЬ БАЛАНС И КРУГИ", cardColor());
+        Button resetStats = button(getString(R.string.reset_balance_rounds), cardColor());
         resetStats.setBackground(outline(cardColor(), 14, 0xFFB84040));
         resetStats.setTextColor(0xFFEF9A9A);
         LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(-1, dp(48));
@@ -531,7 +537,7 @@ public class MainActivity extends Activity {
         resetStats.setOnClickListener(v -> showHomeResetDialog());
 
         Button overlay = button(
-            prefs.getBoolean("panel_enabled", false) ? "ПАНЕЛЬ ВКЛЮЧЕНА" : "ВКЛЮЧИТЬ ПАНЕЛЬ",
+            prefs.getBoolean("panel_enabled", false) ? getString(R.string.panel_on) : getString(R.string.panel_off),
             cardColor()
         );
         overlay.setBackground(outline(cardColor(), 14, accent()));
@@ -541,9 +547,9 @@ public class MainActivity extends Activity {
         overlay.setOnClickListener(v -> toggleOverlay());
 
         LinearLayout chartCard = card();
-        chartCard.addView(text("ГРАФИК ЗАРАБОТКА — 7 ДНЕЙ", 12, muted(), true));
+        chartCard.addView(text(getString(R.string.chart_7_days), 12, muted(), true));
         chartCard.addView(new EarningsChart(this), new LinearLayout.LayoutParams(-1, dp(200)));
-        Button openFull = button("ОТКРЫТЬ ПОЛНЫЙ ГРАФИК", cardColor());
+        Button openFull = button(getString(R.string.open_full_chart), cardColor());
         openFull.setBackground(outline(cardColor(), 14, accent()));
         chartCard.addView(openFull, new LinearLayout.LayoutParams(-1, dp(46)));
         openFull.setOnClickListener(v -> { page = "charts"; rebuildBottomNav(); renderPage(); });
@@ -564,17 +570,17 @@ public class MainActivity extends Activity {
 
     private void showHomeResetDialog() {
         AlertDialog dialog = new AlertDialog.Builder(this)
-            .setTitle("Сбросить текущий баланс и круги?")
-            .setMessage("Будут обнулены только текущий баланс, количество кругов, заработок и таймер текущей смены. История рейсов, графики и общая статистика останутся без изменений.")
-            .setNegativeButton("Отмена", null)
-            .setPositiveButton("Сбросить", (d, which) -> {
+            .setTitle(R.string.reset_balance_title)
+            .setMessage(R.string.reset_balance_msg)
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.reset, (d, which) -> {
                 boolean saved = resetShiftNow();
                 if (saved) {
                     syncData();
                     renderPage();
-                    showInline("Баланс и круги сброшены. История сохранена.");
+                    showInline(getString(R.string.fp_shift_reset));
                 } else {
-                    infoDialog("Сброс не выполнен", "Не удалось сохранить сброс. Попробуй ещё раз.");
+                    infoDialog(getString(R.string.fp_reset_failed), getString(R.string.settings_reset_error));
                 }
             })
             .create();
@@ -605,15 +611,11 @@ public class MainActivity extends Activity {
         long earned = Math.max(0L, read("shiftEarned"));
         long shiftTrips = Math.max(0L, read("shiftTrips"));
         AlertDialog finishShiftDialog = new AlertDialog.Builder(this)
-            .setTitle("Завершить смену?")
-            .setMessage(
-                "Заработок: " + money(earned) + " ₽\n" +
-                "Кругов: " + shiftTrips + "\n" +
-                "Время: " + formatTime(seconds) + "\n\n" +
-                "Результаты будут сохранены в историю смен."
-            )
-            .setNegativeButton("Отмена", null)
-            .setPositiveButton("Завершить", (dialog, which) -> finishShift())
+            .setTitle(R.string.finish_shift_title)
+            .setMessage(getString(R.string.finish_shift_msg,
+                money(earned), (int) shiftTrips, formatTime(seconds)))
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.finish_shift, (dialog, which) -> finishShift())
             .create();
         showThemedDialog(finishShiftDialog);
     }
@@ -626,7 +628,7 @@ public class MainActivity extends Activity {
         if (running) {
             boolean stopped = prefs.edit().putBoolean("running", false).putLong("startAt", 0L).commit();
             if (!stopped) {
-                infoDialog("Смена не закрыта", "Не удалось остановить текущий рейс.");
+                infoDialog(getString(R.string.shift_not_finished), getString(R.string.settings_reset_error));
                 return;
             }
             running = false;
@@ -644,14 +646,14 @@ public class MainActivity extends Activity {
                 shiftKey = UUID.randomUUID().toString();
                 boolean keySaved = prefs.edit().putString("pending_shift_key", shiftKey).commit();
                 if (!keySaved) {
-                    infoDialog("Смена не сохранена", "Не удалось подготовить сохранение смены.");
+                    infoDialog(getString(R.string.shift_not_finished), getString(R.string.settings_reset_error));
                     return;
                 }
             }
 
             long shiftId = repository.addShift(earned, shiftTrips, duration, startedAt, finishTime, "", shiftKey);
             if (shiftId <= 0) {
-                infoDialog("Смена не сохранена", "Не удалось сохранить смену.");
+                infoDialog(getString(R.string.shift_not_finished), getString(R.string.settings_reset_error));
                 return;
             }
 
@@ -667,7 +669,7 @@ public class MainActivity extends Activity {
                 .commit();
 
             if (!saved) {
-                infoDialog("Смена сохранена", "Не удалось обновить текущие показатели.");
+                infoDialog(getString(R.string.shift_finished), getString(R.string.settings_reset_error));
                 return;
             }
 
@@ -675,13 +677,13 @@ public class MainActivity extends Activity {
             handler.removeCallbacks(ticker);
             renderPage();
 
-            notifyUser(NOTIF_SHIFT, "Смена завершена",
-                "Заработок: " + money(earned) + " ₽, кругов: " + shiftTrips);
+            notifyUser(NOTIF_SHIFT, getString(R.string.shift_finished_title),
+                getString(R.string.shift_finished_msg, money(earned), (int) shiftTrips, formatTime(duration)));
 
-            infoDialog("Смена завершена!",
-                "Заработок: " + money(earned) + " ₽\nКругов: " + shiftTrips + "\nВремя: " + formatTime(duration));
+            infoDialog(getString(R.string.shift_finished_title),
+                getString(R.string.shift_finished_msg, money(earned), (int) shiftTrips, formatTime(duration)));
         } catch (Exception e) {
-            infoDialog("Смена не сохранена", "Не удалось сохранить смену.");
+            infoDialog(getString(R.string.shift_not_finished), getString(R.string.settings_reset_error));
         }
     }
 
@@ -706,7 +708,7 @@ public class MainActivity extends Activity {
         renderPage();
 
         if (prefs.getBoolean("shift_start_notifications", false)) {
-            notifyUser(NOTIF_SHIFT, "Смена начата", "Таймер рейса запущен");
+            notifyUser(NOTIF_SHIFT, getString(R.string.shift_started), "");
         }
         handler.removeCallbacks(ticker);
         handler.post(ticker);
@@ -725,7 +727,7 @@ public class MainActivity extends Activity {
     };
 
     private void finishTrip() {
-        if (!isShiftStarted()) { showInline("Сначала начни смену"); return; }
+        if (!isShiftStarted()) { showInline(getString(R.string.fp_start_shift_first)); return; }
 
         long elapsed;
         long amount = pay();
@@ -741,7 +743,7 @@ public class MainActivity extends Activity {
         if (balance > Long.MAX_VALUE - amount || trips == Long.MAX_VALUE ||
             seconds > Long.MAX_VALUE - elapsed || shiftEarned > Long.MAX_VALUE - amount ||
             shiftTrips == Long.MAX_VALUE) {
-            infoDialog("Предел счётчика", "Достигнут предел счётчика.");
+            infoDialog(getString(R.string.fp_error), getString(R.string.fp_cannot_add));
             return;
         }
 
@@ -751,7 +753,7 @@ public class MainActivity extends Activity {
 
         long recordId = repository.addTrip(amount, finishTime, elapsed, "", "", "manual");
         if (recordId <= 0) {
-            infoDialog("Рейс не сохранён", "Не удалось сохранить рейс.");
+            infoDialog(getString(R.string.fp_error), getString(R.string.fp_cannot_save_round));
             return;
         }
 
@@ -778,13 +780,11 @@ public class MainActivity extends Activity {
         startAt = 0;
         handler.removeCallbacks(ticker);
         renderPage();
-        showInline("+" + money(amount) + " ₽ — круг засчитан");
+        showInline("+" + money(amount) + " ₽ — " + getString(R.string.round_title));
     }
 
-    // ---------------- СТАТИСТИКА ----------------
-
     private void showStats() {
-        heading("Статистика", "Результаты и личные рекорды");
+        heading(getString(R.string.stats_title), getString(R.string.stats_subtitle));
 
         long today = 0, week = 0, todayTrips = 0, weekTrips = 0;
         long totalAmount = 0, totalCount = 0, totalDuration = 0, durationCount = 0;
@@ -847,7 +847,7 @@ public class MainActivity extends Activity {
                 }
             }
         } catch (Exception e) {
-            infoDialog("Статистика", "Не удалось загрузить статистику.");
+            infoDialog(getString(R.string.stats_title), getString(R.string.history_deleted_error));
         } finally {
             if (cursor != null) cursor.close();
         }
@@ -858,22 +858,22 @@ public class MainActivity extends Activity {
         trp.topMargin = dp(12);
         content.addView(tileRow1, trp);
 
-        LinearLayout t1 = miniTile("СЕГОДНЯ", money(today) + " ₽", accent());
+        LinearLayout t1 = miniTile(getString(R.string.today), money(today) + " ₽", accent());
         LinearLayout.LayoutParams p1 = new LinearLayout.LayoutParams(0, -2, 1);
         p1.rightMargin = dp(6);
         tileRow1.addView(t1, p1);
 
-        LinearLayout t2 = miniTile("7 ДНЕЙ", money(week) + " ₽", accent());
+        LinearLayout t2 = miniTile(getString(R.string.last_7_days), money(week) + " ₽", accent());
         LinearLayout.LayoutParams p2 = new LinearLayout.LayoutParams(0, -2, 1);
         p2.leftMargin = dp(6);
         tileRow1.addView(t2, p2);
 
         LinearLayout all = card();
-        all.addView(text("ЗА ВСЁ ВРЕМЯ", 12, muted(), true));
+        all.addView(text(getString(R.string.all_time), 12, muted(), true));
         all.addView(text(money(totalAmount) + " ₽", 26, fg(), true));
-        all.addView(text("Кругов: " + totalCount, 13, muted(), false));
-        all.addView(text("Средний за круг: " + money(totalCount > 0 ? totalAmount / totalCount : 0) + " ₽", 13, muted(), false));
-        all.addView(text("Средняя длительность: " + formatTime(durationCount > 0 ? totalDuration / durationCount : 0L), 13, muted(), false));
+        all.addView(text(getString(R.string.rounds_count, (int) totalCount), 13, muted(), false));
+        all.addView(text(getString(R.string.avg_per_round, money(totalCount > 0 ? totalAmount / totalCount : 0)), 13, muted(), false));
+        all.addView(text(getString(R.string.avg_duration, formatTime(durationCount > 0 ? totalDuration / durationCount : 0L)), 13, muted(), false));
 
         int bestWeekday = -1;
         long bestWeekdayAmount = 0;
@@ -884,13 +884,13 @@ public class MainActivity extends Activity {
             }
         }
         if (bestWeekday >= 0 && bestWeekdayAmount > 0) {
-            String[] weekdays = { "Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб" };
-            all.addView(text("Лучший день недели: " + weekdays[bestWeekday] + " (" + money(bestWeekdayAmount) + " ₽)", 13, accent(), true));
+            String[] weekdays = { getString(R.string.sun), getString(R.string.mon), getString(R.string.tue), getString(R.string.wed), getString(R.string.thu), getString(R.string.fri), getString(R.string.sat) };
+            all.addView(text(getString(R.string.best_weekday, weekdays[bestWeekday], money(bestWeekdayAmount)), 13, accent(), true));
         }
-        all.addView(text("Серия дней: " + calculateStreak(allDays), 13, muted(), false));
+        all.addView(text(getString(R.string.streak_days, calculateStreak(allDays)), 13, muted(), false));
 
         LinearLayout records = card();
-        records.addView(text("ЛИЧНЫЕ РЕКОРДЫ", 14, fg(), true));
+        records.addView(text(getString(R.string.personal_records), 14, fg(), true));
         long bestDay = read("best_day_amount");
         long bestDayTime = read("best_day_time");
         if (bestDay <= 0) {
@@ -905,13 +905,13 @@ public class MainActivity extends Activity {
                 }
             }
         }
-        records.addView(text("Самый прибыльный день: " + money(bestDay) + " ₽", 14, accent(), true));
+        records.addView(text(getString(R.string.best_day, money(bestDay)), 14, accent(), true));
         if (bestDayTime > 0) {
             records.addView(text(new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(new Date(bestDayTime)), 12, muted(), false));
         }
 
         LinearLayout daysCard = card();
-        daysCard.addView(text("ПО ДНЯМ", 14, fg(), true));
+        daysCard.addView(text(getString(R.string.by_days), 14, fg(), true));
         SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault());
         ArrayList<String> sortedDays = new ArrayList<>(allDays);
         Collections.sort(sortedDays, Collections.reverseOrder());
@@ -930,10 +930,10 @@ public class MainActivity extends Activity {
                 LinearLayout info = new LinearLayout(this);
                 info.setOrientation(LinearLayout.VERTICAL);
                 info.addView(text(dateFormat.format(parsedDay), 13, fg(), true));
-                info.addView(text(money(amount) + " ₽  •  " + count + " кругов", 12, muted(), false));
+                info.addView(text(money(amount) + " ₽  •  " + count + " " + getString(R.string.nav_goals), 12, muted(), false));
                 row.addView(info, new LinearLayout.LayoutParams(0, -2, 1));
 
-                Button resetDay = button("СБРОС", cardColor());
+                Button resetDay = button(getString(R.string.reset_btn), cardColor());
                 resetDay.setBackground(outline(cardColor(), 10, 0xFFB84040));
                 resetDay.setTextColor(0xFFEF9A9A);
                 row.addView(resetDay, new LinearLayout.LayoutParams(dp(82), dp(40)));
@@ -982,24 +982,24 @@ public class MainActivity extends Activity {
         box.setPadding(dp(18), dp(8), dp(18), 0);
 
         CheckBox earnings = new CheckBox(this);
-        earnings.setText("Сбросить заработок за этот день");
+        earnings.setText(getString(R.string.reset_balance_rounds));
         earnings.setTextColor(fg());
         earnings.setButtonTintList(ColorStateList.valueOf(accent()));
         box.addView(earnings);
 
         CheckBox tripsCount = new CheckBox(this);
-        tripsCount.setText("Сбросить количество кругов за этот день");
+        tripsCount.setText(getString(R.string.rounds_total));
         tripsCount.setTextColor(fg());
         tripsCount.setButtonTintList(ColorStateList.valueOf(accent()));
         box.addView(tripsCount);
 
         AlertDialog dialog = new AlertDialog.Builder(this)
-            .setTitle("Сброс — " + date)
+            .setTitle(date)
             .setView(box)
-            .setNegativeButton("Отмена", null)
-            .setPositiveButton("Сбросить", (d, which) -> {
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.reset, (d, which) -> {
                 if (!earnings.isChecked() && !tripsCount.isChecked()) {
-                    showInline("Выбери хотя бы один показатель");
+                    showInline(getString(R.string.select_at_least_one_day));
                     return;
                 }
                 long resetAt = System.currentTimeMillis();
@@ -1008,24 +1008,22 @@ public class MainActivity extends Activity {
                 if (tripsCount.isChecked()) success &= repository.saveDailyMetricReset(dayStart, "trips", resetAt);
                 if (success) {
                     renderPage();
-                    showInline("Показатели сброшены. Баланс не изменён.");
+                    showInline(getString(R.string.fp_shift_reset));
                 } else {
-                    infoDialog("Сброс не выполнен", "Не удалось сохранить сброс.");
+                    infoDialog(getString(R.string.fp_error), getString(R.string.settings_reset_error));
                 }
             })
             .create();
         showThemedDialog(dialog);
     }
 
-    // ---------------- ИСТОРИЯ ----------------
-
     private void showHistory() {
-        heading("История", "Смена, круги и время");
+        heading(getString(R.string.history_title), getString(R.string.history_subtitle));
 
         LinearLayout clearCard = card();
-        clearCard.addView(text("УПРАВЛЕНИЕ ИСТОРИЕЙ", 14, fg(), true));
-        clearCard.addView(text("Удаляет записи кругов из базы по выбранным дням. Баланс и счётчики не изменятся.", 12, muted(), false));
-        Button clearHistoryBtn = button("СТЕРЕТЬ ИСТОРИЮ (ПО ДНЯМ)", cardColor());
+        clearCard.addView(text(getString(R.string.history_manage), 14, fg(), true));
+        clearCard.addView(text(getString(R.string.history_manage_desc), 12, muted(), false));
+        Button clearHistoryBtn = button(getString(R.string.clear_history_by_day), cardColor());
         clearHistoryBtn.setBackground(outline(cardColor(), 14, 0xFFB84040));
         clearHistoryBtn.setTextColor(0xFFEF9A9A);
         LinearLayout.LayoutParams chp = new LinearLayout.LayoutParams(-1, dp(46));
@@ -1038,7 +1036,7 @@ public class MainActivity extends Activity {
 
         if (startedAt > 0) {
             LinearLayout startCard = card();
-            startCard.addView(text("Смена начата", 16, accent(), true));
+            startCard.addView(text(getString(R.string.shift_started), 16, accent(), true));
             startCard.addView(text(formatDateTime(startedAt), 14, fg(), false));
         }
 
@@ -1071,13 +1069,13 @@ public class MainActivity extends Activity {
             }
 
             LinearLayout summary = card();
-            summary.addView(text("КОЛИЧЕСТВО КРУГОВ", 12, muted(), true));
-            summary.addView(text("Сегодня: " + todayCount, 20, accent(), true));
+            summary.addView(text(getString(R.string.rounds_total), 12, muted(), true));
+            summary.addView(text(getString(R.string.today_label, (int) todayCount), 20, accent(), true));
 
             final HashMap<String, Long> dayCounts = byDayCount;
             final HashMap<String, Long> dayAmounts = byDayAmount;
 
-            Button openDays = button("📁  ПО ДНЯМ (" + previousDaysCount + ")", accent());
+            Button openDays = button(getString(R.string.by_days_btn, (int) previousDaysCount), accent());
             summary.addView(openDays, new LinearLayout.LayoutParams(-1, dp(48)));
             openDays.setOnClickListener(v -> showDaysBreakdown(dayCounts, dayAmounts));
 
@@ -1099,32 +1097,30 @@ public class MainActivity extends Activity {
                     String note = cursor.getString(noteColumn);
 
                     LinearLayout c = card();
-                    c.addView(text("Круг", 16, accent(), true));
-                    c.addView(text("Время", 11, muted(), true));
+                    c.addView(text(getString(R.string.round_title), 16, accent(), true));
+                    c.addView(text(getString(R.string.time_label), 11, muted(), true));
                     c.addView(text(time > 0 ? fmt.format(new Date(time)) : "—", 14, fg(), false));
                     c.addView(text("+" + money(amount) + " ₽", 20, accent(), true));
-                    if (duration > 0) c.addView(text("Длительность: " + formatTime(duration), 12, muted(), false));
-                    if (route != null && !route.isEmpty()) c.addView(text("Маршрут: " + route, 12, fg(), false));
-                    if (note != null && !note.isEmpty()) c.addView(text("Заметка: " + note, 12, muted(), false));
+                    if (duration > 0) c.addView(text(getString(R.string.avg_duration, formatTime(duration)), 12, muted(), false));
                     number--;
                 }
             } else {
-                card().addView(text("Пока нет записей. Добавь первый круг!", 14, muted(), false));
+                card().addView(text(getString(R.string.no_records), 14, muted(), false));
             }
         } catch (Exception e) {
-            card().addView(text("Не удалось загрузить историю", 14, muted(), false));
+            card().addView(text(getString(R.string.no_records), 14, muted(), false));
         } finally {
             if (cursor != null) cursor.close();
         }
 
         if (finishedAt > 0) {
             LinearLayout endCard = card();
-            endCard.addView(text("Закончил смену", 16, 0xFFEF9A9A, true));
+            endCard.addView(text(getString(R.string.shift_finished), 16, 0xFFEF9A9A, true));
             endCard.addView(text(formatDateTime(finishedAt), 14, fg(), false));
         } else if (startedAt > 0) {
             LinearLayout endCard = card();
-            endCard.addView(text("Смена идёт", 16, accent(), true));
-            endCard.addView(text("Ещё не завершена", 13, muted(), false));
+            endCard.addView(text(getString(R.string.shift_in_progress), 16, accent(), true));
+            endCard.addView(text(getString(R.string.shift_not_finished), 13, muted(), false));
         }
     }
 
@@ -1154,7 +1150,7 @@ public class MainActivity extends Activity {
         }
 
         if (availableDays.isEmpty()) {
-            infoDialog("История", "Нет записей для удаления.");
+            infoDialog(getString(R.string.history_title), getString(R.string.no_history));
             return;
         }
 
@@ -1179,14 +1175,14 @@ public class MainActivity extends Activity {
         }
 
         AlertDialog dialog = new AlertDialog.Builder(this)
-            .setTitle("Выбери дни для удаления")
+            .setTitle(R.string.select_days_title)
             .setView(scroll)
-            .setNegativeButton("Отмена", null)
-            .setPositiveButton("Удалить", (d, which) -> {
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.delete, (d, which) -> {
                 boolean any = false;
                 for (CheckBox c : checks) if (c.isChecked()) any = true;
                 if (!any) {
-                    showInline("Выбери хотя бы один день");
+                    showInline(getString(R.string.select_at_least_one_day));
                     return;
                 }
                 try {
@@ -1198,9 +1194,9 @@ public class MainActivity extends Activity {
                         }
                     }
                     renderPage();
-                    showInline("Выбранные дни удалены из истории.");
+                    showInline(getString(R.string.days_deleted));
                 } catch (Exception e) {
-                    infoDialog("Ошибка", "Не удалось удалить историю.");
+                    infoDialog(getString(R.string.fp_error), getString(R.string.history_deleted_error));
                 }
             })
             .create();
@@ -1209,7 +1205,7 @@ public class MainActivity extends Activity {
 
     private void showDaysBreakdown(HashMap<String, Long> counts, HashMap<String, Long> amounts) {
         if (counts.isEmpty()) {
-            infoDialog("Прошлые дни", "Записей за прошлые дни нет.");
+            infoDialog(getString(R.string.history_title), getString(R.string.no_history));
             return;
         }
         SimpleDateFormat dayKey = new SimpleDateFormat("yyyyMMdd", Locale.US);
@@ -1234,7 +1230,7 @@ public class MainActivity extends Activity {
                 row.setPadding(dp(12), dp(12), dp(12), dp(12));
                 row.setBackground(shape(cardColor(), 12));
                 row.addView(text(display.format(d), 14, fg(), true));
-                row.addView(text(money(amt) + " ₽  •  " + cnt + " кругов", 12, muted(), false));
+                row.addView(text(money(amt) + " ₽  •  " + cnt + " " + getString(R.string.nav_goals), 12, muted(), false));
                 LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(-1, -2);
                 rp.topMargin = dp(8);
                 box.addView(row, rp);
@@ -1242,9 +1238,9 @@ public class MainActivity extends Activity {
             }
         }
         AlertDialog d = new AlertDialog.Builder(this)
-            .setTitle("Круги за прошлые дни")
+            .setTitle(R.string.by_days)
             .setView(scroll)
-            .setPositiveButton("Закрыть", null)
+            .setPositiveButton(R.string.ok, null)
             .create();
         showThemedDialog(d);
     }
@@ -1262,9 +1258,9 @@ public class MainActivity extends Activity {
     }
 
     private void showCalculator() {
-        heading("Цели", "Копи и отслеживай прогресс");
+        heading(getString(R.string.goals_title), getString(R.string.goals_subtitle));
 
-        Button add = button("+ ДОБАВИТЬ ЦЕЛЬ", accent());
+        Button add = button(getString(R.string.add_goal), accent());
         LinearLayout.LayoutParams ap = new LinearLayout.LayoutParams(-1, dp(48));
         ap.topMargin = dp(12);
         content.addView(add, ap);
@@ -1272,14 +1268,14 @@ public class MainActivity extends Activity {
 
         JSONArray goals = getGoals();
         if (goals.length() == 0) {
-            card().addView(text("Пока нет целей. Добавь первую!", 14, muted(), false));
+            card().addView(text(getString(R.string.no_goals), 14, muted(), false));
         }
 
         for (int i = 0; i < goals.length(); i++) {
             final int index = i;
             try {
                 JSONObject goal = goals.getJSONObject(i);
-                String name = goal.optString("name", "Моя цель");
+                String name = goal.optString("name", "Goal");
                 long amount = Math.max(1L, goal.optLong("amount", 1));
                 long roundsPerDay = Math.max(1L, goal.optLong("rounds", 1));
                 long remaining = Math.max(0L, amount - balance);
@@ -1292,8 +1288,8 @@ public class MainActivity extends Activity {
 
                 LinearLayout c = card();
                 c.addView(text(name, 19, fg(), true));
-                c.addView(text("Цель: " + money(amount) + " ₽", 13, muted(), false));
-                c.addView(text("Осталось: " + money(remaining) + " ₽", 16, accent(), true));
+                c.addView(text(getString(R.string.goal_amount, money(amount)), 13, muted(), false));
+                c.addView(text(getString(R.string.goal_remaining, money(remaining)), 16, accent(), true));
 
                 ProgressBar bar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
                 bar.setMax(100);
@@ -1303,17 +1299,17 @@ public class MainActivity extends Activity {
                 bp.topMargin = dp(10);
                 c.addView(bar, bp);
 
-                c.addView(text("Выполнено: " + String.format(Locale.US, "%.1f", percent) + "%", 13, fg(), false));
-                c.addView(text("Кругов осталось: " + roundsNeeded, 14, fg(), true));
-                c.addView(text("План: " + roundsPerDay + " кругов/день", 13, muted(), false));
-                c.addView(text("Ожидаемо в день: " + money(expected) + " ₽", 13, accent(), true));
-                c.addView(text("Дней до цели: " + days, 13, fg(), false));
+                c.addView(text(getString(R.string.goal_completed, String.format(Locale.US, "%.1f", percent)), 13, fg(), false));
+                c.addView(text(getString(R.string.goal_rounds_left, (int) roundsNeeded), 14, fg(), true));
+                c.addView(text(getString(R.string.goal_plan, (int) roundsPerDay), 13, muted(), false));
+                c.addView(text(getString(R.string.goal_expected, money(expected)), 13, accent(), true));
+                c.addView(text(getString(R.string.goal_days, (int) days), 13, fg(), false));
 
-                Button editButton = button("ИЗМЕНИТЬ", cardColor());
+                Button editButton = button(getString(R.string.edit), cardColor());
                 c.addView(editButton, new LinearLayout.LayoutParams(-1, dp(44)));
                 editButton.setOnClickListener(v -> showGoalEditor(index));
 
-                Button deleteButton = button("УДАЛИТЬ", cardColor());
+                Button deleteButton = button(getString(R.string.delete_btn), cardColor());
                 deleteButton.setBackground(outline(cardColor(), 14, 0xFFB84040));
                 deleteButton.setTextColor(0xFFEF9A9A);
                 c.addView(deleteButton, new LinearLayout.LayoutParams(-1, dp(44)));
@@ -1337,21 +1333,21 @@ public class MainActivity extends Activity {
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(1);
         box.setPadding(dp(18), dp(8), dp(18), 0);
-        EditText name = edit("Название цели", InputType.TYPE_CLASS_TEXT);
+        EditText name = edit(getString(R.string.goal_name_hint), InputType.TYPE_CLASS_TEXT);
         name.setText(oldName);
         box.addView(name);
-        EditText amount = edit("Сумма цели в рублях", InputType.TYPE_CLASS_NUMBER);
+        EditText amount = edit(getString(R.string.goal_amount_hint), InputType.TYPE_CLASS_NUMBER);
         amount.setText(oldAmount);
         box.addView(amount);
-        EditText rounds = edit("Кругов в день", InputType.TYPE_CLASS_NUMBER);
+        EditText rounds = edit(getString(R.string.goal_rounds_hint), InputType.TYPE_CLASS_NUMBER);
         rounds.setText(oldRounds);
         box.addView(rounds);
 
         AlertDialog goalEditorDialog = new AlertDialog.Builder(this)
-            .setTitle(index < 0 ? "Новая цель" : "Изменить цель")
+            .setTitle(index < 0 ? R.string.new_goal : R.string.edit_goal)
             .setView(box)
-            .setNegativeButton("Отмена", null)
-            .setPositiveButton("Сохранить", (d, w) -> {
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.save, (d, w) -> {
                 try {
                     String n = name.getText().toString().trim();
                     long a = Long.parseLong(amount.getText().toString().trim());
@@ -1366,7 +1362,7 @@ public class MainActivity extends Activity {
                     saveGoals(goals);
                     renderPage();
                 } catch (Exception e) {
-                    infoDialog("Цель не сохранена", "Проверь название, сумму и количество кругов.");
+                    infoDialog(getString(R.string.fp_error), getString(R.string.goal_save_error));
                 }
             })
             .create();
@@ -1375,10 +1371,10 @@ public class MainActivity extends Activity {
 
     private void confirmDeleteGoal(int index) {
         AlertDialog deleteGoalDialog = new AlertDialog.Builder(this)
-            .setTitle("Удалить цель?")
-            .setMessage("Эта цель будет удалена.")
-            .setNegativeButton("Отмена", null)
-            .setPositiveButton("Удалить", (d, w) -> {
+            .setTitle(R.string.delete_goal_q)
+            .setMessage(R.string.delete_goal_msg)
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.delete, (d, w) -> {
                 JSONArray old = getGoals();
                 JSONArray updated = new JSONArray();
                 for (int i = 0; i < old.length(); i++) if (i != index) updated.put(old.opt(i));
@@ -1390,12 +1386,10 @@ public class MainActivity extends Activity {
     }
 
     private void showCharts() {
-        heading("Графики", "Заработок за 7 дней");
+        heading(getString(R.string.chart_7_days), "");
         LinearLayout c = card();
         c.addView(new EarningsChart(this), new LinearLayout.LayoutParams(-1, dp(300)));
-        LinearLayout info = card();
-        info.addView(text("Источник: сохранённая история рейсов.", 13, muted(), false));
-        Button back = button("НАЗАД НА ГЛАВНУЮ", cardColor());
+        Button back = button(getString(R.string.nav_home), cardColor());
         back.setBackground(outline(cardColor(), 14, accent()));
         LinearLayout.LayoutParams bp = new LinearLayout.LayoutParams(-1, dp(46));
         bp.topMargin = dp(12);
@@ -1481,12 +1475,12 @@ public class MainActivity extends Activity {
     }
 
     private void showThemes() {
-        heading("Оформление", "Цветовая тема приложения");
+        heading(getString(R.string.design_title), getString(R.string.design_desc));
 
         String[] names = {
-            "Неон", "Индиго", "Циан", "Красная",
-            "Зелёная", "Золото", "Синяя", "Бирюза",
-            "Розовая", "Оранж"
+            getString(R.string.theme_neon), getString(R.string.theme_indigo), getString(R.string.theme_cyan), getString(R.string.theme_red),
+            getString(R.string.theme_green), getString(R.string.theme_gold), getString(R.string.theme_blue), getString(R.string.theme_teal),
+            getString(R.string.theme_pink), getString(R.string.theme_orange)
         };
 
         for (int i = 0; i < names.length; i++) {
@@ -1519,59 +1513,90 @@ public class MainActivity extends Activity {
     }
 
     private void showSettings() {
-        heading("Ещё", "Настройки и оформление");
+        heading(getString(R.string.settings_title), getString(R.string.settings_subtitle));
 
         LinearLayout themeCard = card();
-        themeCard.addView(text("ОФОРМЛЕНИЕ", 12, muted(), true));
-        themeCard.addView(text("Выбери цветовую тему приложения", 13, muted(), false));
-        Button openThemes = button("ВЫБРАТЬ ТЕМУ", accent());
+        themeCard.addView(text(getString(R.string.design_title), 12, muted(), true));
+        themeCard.addView(text(getString(R.string.design_desc), 13, muted(), false));
+        Button openThemes = button(getString(R.string.choose_theme), accent());
         LinearLayout.LayoutParams tp = new LinearLayout.LayoutParams(-1, dp(48));
         tp.topMargin = dp(8);
         themeCard.addView(openThemes, tp);
         openThemes.setOnClickListener(v -> { page = "theme"; rebuildBottomNav(); renderPage(); });
 
+        LinearLayout lang = card();
+        lang.addView(text(getString(R.string.language), 12, muted(), true));
+        Button langBtn = button(getString(R.string.language) + ": " + currentLanguageLabel(), accent());
+        LinearLayout.LayoutParams lbp = new LinearLayout.LayoutParams(-1, dp(48));
+        lbp.topMargin = dp(8);
+        lang.addView(langBtn, lbp);
+        langBtn.setOnClickListener(v -> showLanguageDialog());
+
         LinearLayout sound = card();
-        sound.addView(text("ЗВУК И ВИБРАЦИЯ", 12, muted(), true));
-        addSwitch(sound, "Звуки", "sound_enabled", true);
-        addSwitch(sound, "Вибрация", "vibration_enabled", true);
-        addSwitch(sound, "Тихий режим", "silent_mode", false);
-        addSeekBar(sound, "Громкость", "sound_volume", 0, 100, 70);
+        sound.addView(text(getString(R.string.sound_vibro), 12, muted(), true));
+        addSwitch(sound, getString(R.string.sounds), "sound_enabled", true);
+        addSwitch(sound, getString(R.string.vibration), "vibration_enabled", true);
+        addSwitch(sound, getString(R.string.silent_mode), "silent_mode", false);
+        addSeekBar(sound, getString(R.string.volume), "sound_volume", 0, 100, 70);
 
         LinearLayout panel = card();
-        panel.addView(text("ПЛАВАЮЩАЯ ПАНЕЛЬ", 12, muted(), true));
-        addSeekBar(panel, "Размер", "panel_size", 70, 130, 100);
-        addSeekBar(panel, "Прозрачность", "panel_opacity", 30, 100, 100);
-        addSwitch(panel, "Показывать панель", "panel_enabled", false);
+        panel.addView(text(getString(R.string.floating_panel), 12, muted(), true));
+        addSeekBar(panel, getString(R.string.panel_size), "panel_size", 70, 130, 100);
+        addSeekBar(panel, getString(R.string.panel_opacity), "panel_opacity", 30, 100, 100);
+        addSwitch(panel, getString(R.string.show_panel), "panel_enabled", false);
 
         LinearLayout currency = card();
-        currency.addView(text("ФОРМАТ", 12, muted(), true));
-        addSwitch(currency, "Компактные суммы (к, м)", "currency_compact", false);
+        currency.addView(text(getString(R.string.format), 12, muted(), true));
+        addSwitch(currency, getString(R.string.compact_numbers), "currency_compact", false);
 
         LinearLayout notif = card();
-        notif.addView(text("УВЕДОМЛЕНИЯ", 12, muted(), true));
-        addSwitch(notif, "Показывать", "notifications_enabled", true);
-        addSwitch(notif, "О завершении рейса", "trip_finish_notifications", true);
-        addSwitch(notif, "О начале смены", "shift_start_notifications", false);
+        notif.addView(text(getString(R.string.notifications), 12, muted(), true));
+        addSwitch(notif, getString(R.string.show_notifications), "notifications_enabled", true);
+        addSwitch(notif, getString(R.string.notif_trip_finish), "trip_finish_notifications", true);
+        addSwitch(notif, getString(R.string.notif_shift_start), "shift_start_notifications", false);
 
         LinearLayout home = card();
-        home.addView(text("ГЛАВНЫЙ ЭКРАН", 12, muted(), true));
-        Button customize = button("НАСТРОИТЬ БЛОКИ", accent());
+        home.addView(text(getString(R.string.home_screen), 12, muted(), true));
+        Button customize = button(getString(R.string.customize_blocks), accent());
         home.addView(customize, new LinearLayout.LayoutParams(-1, dp(48)));
         customize.setOnClickListener(v -> showHomeCustomization());
 
         LinearLayout backup = card();
-        backup.addView(text("ДАННЫЕ", 12, muted(), true));
-        Button exportButton = button("ЭКСПОРТ", cardColor());
+        backup.addView(text(getString(R.string.data), 12, muted(), true));
+        Button exportButton = button(getString(R.string.export), cardColor());
         backup.addView(exportButton, new LinearLayout.LayoutParams(-1, dp(46)));
         exportButton.setOnClickListener(v -> exportData());
 
         LinearLayout reset = card();
-        reset.addView(text("СБРОС", 12, muted(), true));
-        Button resetButton = button("СБРОСИТЬ НАСТРОЙКИ", cardColor());
+        reset.addView(text(getString(R.string.reset_settings_title), 12, muted(), true));
+        Button resetButton = button(getString(R.string.reset_settings_btn), cardColor());
         resetButton.setBackground(outline(cardColor(), 14, 0xFFB84040));
         resetButton.setTextColor(0xFFEF9A9A);
         reset.addView(resetButton, new LinearLayout.LayoutParams(-1, dp(46)));
         resetButton.setOnClickListener(v -> confirmSettingsReset());
+    }
+
+    private String currentLanguageLabel() {
+        String lang = LocaleHelper.getLanguage(this);
+        if (lang == null || lang.isEmpty()) return getString(R.string.language_system);
+        if ("en".equals(lang)) return getString(R.string.language_english);
+        return getString(R.string.language_russian);
+    }
+
+    private void showLanguageDialog() {
+        String[] options = {
+            getString(R.string.language_system),
+            getString(R.string.language_russian),
+            getString(R.string.language_english)
+        };
+        new AlertDialog.Builder(this)
+            .setTitle(R.string.language)
+            .setItems(options, (d, which) -> {
+                String lang = which == 0 ? "" : (which == 1 ? "ru" : "en");
+                LocaleHelper.setLanguage(this, lang);
+                recreate();
+            })
+            .show();
     }
 
     private void exportData() {
@@ -1625,9 +1650,9 @@ public class MainActivity extends Activity {
 
             android.content.ClipboardManager cm = (android.content.ClipboardManager)getSystemService(Context.CLIPBOARD_SERVICE);
             cm.setPrimaryClip(android.content.ClipData.newPlainText("TruckLog Export", data.toString(2)));
-            infoDialog("Экспорт готов", "Копия статистики скопирована в буфер обмена.");
+            infoDialog(getString(R.string.export), getString(R.string.settings_reset));
         } catch (Exception e) {
-            infoDialog("Экспорт не выполнен", "Не удалось сформировать копию данных.");
+            infoDialog(getString(R.string.fp_error), getString(R.string.settings_reset_error));
         }
     }
 
@@ -1665,10 +1690,10 @@ public class MainActivity extends Activity {
 
     private void confirmSettingsReset() {
         AlertDialog dialog = new AlertDialog.Builder(this)
-            .setTitle("Сбросить настройки?")
-            .setMessage("Тема, настройки панели, звука, вибрации, уведомлений и главного экрана вернутся к стандартным. Статистика и история останутся.")
-            .setNegativeButton("Отмена", null)
-            .setPositiveButton("Сбросить", (d, w) -> {
+            .setTitle(R.string.reset_settings_q)
+            .setMessage(R.string.reset_settings_msg)
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.reset, (d, w) -> {
                 try {
                     stopService(new Intent(this, FloatingPanelService.class));
                 } catch (Exception ignored) {}
@@ -1686,22 +1711,16 @@ public class MainActivity extends Activity {
                 e.remove("notifications_enabled");
                 e.remove("trip_finish_notifications");
                 e.remove("shift_start_notifications");
-                e.remove("home_block_balance");
-                e.remove("home_block_rounds");
-                e.remove("home_block_payout");
-                e.remove("home_block_timer");
-                e.remove("home_block_overlay");
-                e.remove("home_block_order");
 
                 boolean saved = e.commit();
 
                 if (!saved) {
-                    infoDialog("Сброс не выполнен", "Не удалось сохранить настройки. Попробуй ещё раз.");
+                    infoDialog(getString(R.string.fp_error), getString(R.string.settings_reset_error));
                     return;
                 }
 
                 rebuildBase();
-                showInline("Настройки сброшены");
+                showInline(getString(R.string.settings_reset));
             })
             .create();
         showThemedDialog(dialog);
@@ -1721,17 +1740,17 @@ public class MainActivity extends Activity {
             box.addView(checks[i]);
         }
         AlertDialog homeCustomizationDialog = new AlertDialog.Builder(this)
-            .setTitle("Блоки главного экрана")
+            .setTitle(R.string.customize_blocks)
             .setView(box)
-            .setNegativeButton("Отмена", null)
-            .setPositiveButton("Сохранить", (d, w) -> {
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.save, (d, w) -> {
                 SharedPreferences.Editor e = prefs.edit();
                 for (int i = 0; i < blockKeys.length; i++) {
                     e.putBoolean("home_block_" + blockKeys[i], checks[i].isChecked());
                 }
                 e.apply();
                 renderPage();
-                showInline("Главный экран обновлён");
+                showInline(getString(R.string.settings_reset));
             })
             .create();
         showThemedDialog(homeCustomizationDialog);
@@ -1756,7 +1775,7 @@ public class MainActivity extends Activity {
     private void setOverlayEnabled(boolean enabled) {
         if (enabled) {
             if (Build.VERSION.SDK_INT >= 23 && !Settings.canDrawOverlays(this)) {
-                infoDialog("Разрешение", "Разреши отображение поверх других окон, затем включи панель снова.");
+                infoDialog(getString(R.string.fp_error), getString(R.string.fp_start_shift_first));
                 Intent i = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                     android.net.Uri.parse("package:" + getPackageName()));
                 startActivity(i);
@@ -1766,7 +1785,7 @@ public class MainActivity extends Activity {
                 startService(new Intent(this, FloatingPanelService.class));
                 prefs.edit().putBoolean("panel_enabled", true).apply();
             } catch (Exception e) {
-                infoDialog("Панель не включена", "Не удалось включить плавающую панель.");
+                infoDialog(getString(R.string.fp_error), getString(R.string.fp_reset_failed));
             }
         } else {
             stopService(new Intent(this, FloatingPanelService.class));
@@ -1799,4 +1818,4 @@ public class MainActivity extends Activity {
         }
         super.onDestroy();
     }
-                }
+                              }
