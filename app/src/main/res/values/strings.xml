@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TruckLog</string>
+    <string name="app_subtitle">Бортовой компьютер</string>
+
+    <!-- Главная -->
+    <string name="nav_home">Главная</string>
+    <string name="nav_stats">Стата</string>
+    <string name="nav_history">История</string>
+    <string name="nav_goals">Цели</string>
+    <string name="nav_more">Ещё</string>
+
+    <string name="current_balance">ТЕКУЩИЙ БАЛАНС</string>
+    <string name="until_goal">До цели: %1$s ₽</string>
+    <string name="rounds_tile">КРУГИ</string>
+    <string name="payout_tile">ВЫПЛАТА</string>
+    <string name="current_trip">ТЕКУЩИЙ РЕЙС</string>
+    <string name="trip_running">Рейс идёт</string>
+    <string name="shift_active">Смена активна</string>
+    <string name="shift_not_started">Смена не начата</string>
+    <string name="start_shift">НАЧАТЬ СМЕНУ</string>
+    <string name="make_round">СДЕЛАЛ КРУГ  +%1$s ₽</string>
+    <string name="finish_shift">ЗАВЕРШИТЬ СМЕНУ</string>
+    <string name="reset_balance_rounds">СБРОСИТЬ БАЛАНС И КРУГИ</string>
+    <string name="panel_on">ПАНЕЛЬ ВКЛЮЧЕНА</string>
+    <string name="panel_off">ВКЛЮЧИТЬ ПАНЕЛЬ</string>
+
+    <string name="chart_7_days">ГРАФИК ЗАРАБОТКА — 7 ДНЕЙ</string>
+    <string name="open_full_chart">ОТКРЫТЬ ПОЛНЫЙ ГРАФИК</string>
+
+    <!-- Диалоги -->
+    <string name="reset_balance_title">Сбросить текущий баланс и круги?</string>
+    <string name="reset_balance_msg">Будут обнулены только текущий баланс, количество кругов, заработок и таймер текущей смены. История рейсов, графики и общая статистика останутся без изменений.</string>
+    <string name="reset">Сбросить</string>
+    <string name="cancel">Отмена</string>
+    <string name="ok">ОК</string>
+    <string name="finish_shift_title">Завершить смену?</string>
+    <string name="finish_shift_msg">Заработок: %1$s ₽\nКругов: %2$d\nВремя: %3$s\n\nРезультаты будут сохранены в историю смен.</string>
+    <string name="shift_finished_title">Смена завершена!</string>
+    <string name="shift_finished_msg">Заработок: %1$s ₽\nКругов: %2$d\nВремя: %3$s</string>
+
+    <!-- Статистика -->
+    <string name="stats_title">Статистика</string>
+    <string name="stats_subtitle">Результаты и личные рекорды</string>
+    <string name="today">СЕГОДНЯ</string>
+    <string name="last_7_days">7 ДНЕЙ</string>
+    <string name="all_time">ЗА ВСЁ ВРЕМЯ</string>
+    <string name="rounds_count">Кругов: %1$d</string>
+    <string name="avg_per_round">Средний за круг: %1$s ₽</string>
+    <string name="avg_duration">Средняя длительность: %1$s</string>
+    <string name="best_weekday">Лучший день недели: %1$s (%2$s ₽)</string>
+    <string name="streak_days">Серия дней: %1$d</string>
+    <string name="personal_records">ЛИЧНЫЕ РЕКОРДЫ</string>
+    <string name="best_day">Самый прибыльный день: %1$s ₽</string>
+    <string name="by_days">ПО ДНЯМ</string>
+    <string name="reset_btn">СБРОС</string>
+
+    <!-- История -->
+    <string name="history_title">История</string>
+    <string name="history_subtitle">Смена, круги и время</string>
+    <string name="history_manage">УПРАВЛЕНИЕ ИСТОРИЕЙ</string>
+    <string name="history_manage_desc">Удаляет записи кругов из базы по выбранным дням. Баланс и счётчики не изменятся.</string>
+    <string name="clear_history_by_day">СТЕРЕТЬ ИСТОРИЮ (ПО ДНЯМ)</string>
+    <string name="shift_started">Смена начата</string>
+    <string name="shift_finished">Закончил смену</string>
+    <string name="shift_in_progress">Смена идёт</string>
+    <string name="shift_not_finished">Ещё не завершена</string>
+    <string name="rounds_total">КОЛИЧЕСТВО КРУГОВ</string>
+    <string name="today_label">Сегодня: %1$d</string>
+    <string name="by_days_btn">📁  ПО ДНЯМ (%1$d)</string>
+    <string name="round_title">Круг</string>
+    <string name="time_label">Время</string>
+    <string name="no_records">Пока нет записей. Добавь первый круг!</string>
+
+    <!-- Диалог удаления истории -->
+    <string name="select_days_title">Выбери дни для удаления</string>
+    <string name="delete">Удалить</string>
+    <string name="select_at_least_one_day">Выбери хотя бы один день</string>
+    <string name="days_deleted">Выбранные дни удалены из истории.</string>
+    <string name="no_history">Нет записей для удаления.</string>
+    <string name="history_deleted_error">Не удалось удалить историю.</string>
+
+    <!-- Настройки -->
+    <string name="settings_title">Ещё</string>
+    <string name="settings_subtitle">Настройки и оформление</string>
+    <string name="design_title">ОФОРМЛЕНИЕ</string>
+    <string name="design_desc">Выбери цветовую тему приложения</string>
+    <string name="choose_theme">ВЫБРАТЬ ТЕМУ</string>
+    <string name="sound_vibro">ЗВУК И ВИБРАЦИЯ</string>
+    <string name="sounds">Звуки</string>
+    <string name="vibration">Вибрация</string>
+    <string name="silent_mode">Тихий режим</string>
+    <string name="volume">Громкость</string>
+    <string name="floating_panel">ПЛАВАЮЩАЯ ПАНЕЛЬ</string>
+    <string name="panel_size">Размер</string>
+    <string name="panel_opacity">Прозрачность</string>
+    <string name="show_panel">Показывать панель</string>
+    <string name="format">ФОРМАТ</string>
+    <string name="compact_numbers">Компактные суммы (к, м)</string>
+    <string name="notifications">УВЕДОМЛЕНИЯ</string>
+    <string name="show_notifications">Показывать</string>
+    <string name="notif_trip_finish">О завершении рейса</string>
+    <string name="notif_shift_start">О начале смены</string>
+    <string name="home_screen">ГЛАВНЫЙ ЭКРАН</string>
+    <string name="customize_blocks">НАСТРОИТЬ БЛОКИ</string>
+    <string name="data">ДАННЫЕ</string>
+    <string name="export">ЭКСПОРТ</string>
+    <string name="reset_settings_title">СБРОС</string>
+    <string name="reset_settings_btn">СБРОСИТЬ НАСТРОЙКИ</string>
+    <string name="reset_settings_q">Сбросить настройки?</string>
+    <string name="reset_settings_msg">Тема, настройки панели, звука, вибрации, уведомлений и главного экрана вернутся к стандартным. Статистика и история останутся.</string>
+    <string name="settings_reset">Настройки сброшены</string>
+    <string name="settings_reset_error">Не удалось сохранить настройки. Попробуй ещё раз.</string>
+
+    <!-- Язык -->
+    <string name="language">ЯЗЫК</string>
+    <string name="language_russian">Русский</string>
+    <string name="language_english">English</string>
+    <string name="language_system">Системный</string>
+
+    <!-- Цели -->
+    <string name="goals_title">Цели</string>
+    <string name="goals_subtitle">Копи и отслеживай прогресс</string>
+    <string name="add_goal">+ ДОБАВИТЬ ЦЕЛЬ</string>
+    <string name="goal_amount">Цель: %1$s ₽</string>
+    <string name="goal_remaining">Осталось: %1$s ₽</string>
+    <string name="goal_completed">Выполнено: %1$s%%</string>
+    <string name="goal_rounds_left">Кругов осталось: %1$d</string>
+    <string name="goal_plan">План: %1$d кругов/день</string>
+    <string name="goal_expected">Ожидаемо в день: %1$s ₽</string>
+    <string name="goal_days">Дней до цели: %1$d</string>
+    <string name="edit">ИЗМЕНИТЬ</string>
+    <string name="delete_btn">УДАЛИТЬ</string>
+    <string name="no_goals">Пока нет целей. Добавь первую!</string>
+    <string name="new_goal">Новая цель</string>
+    <string name="edit_goal">Изменить цель</string>
+    <string name="goal_name_hint">Название цели</string>
+    <string name="goal_amount_hint">Сумма цели в рублях</string>
+    <string name="goal_rounds_hint">Кругов в день</string>
+    <string name="save">Сохранить</string>
+    <string name="delete_goal_q">Удалить цель?</string>
+    <string name="delete_goal_msg">Эта цель будет удалена.</string>
+    <string name="goal_save_error">Проверь название, сумму и количество кругов.</string>
+
+    <!-- Плавающая панель -->
+    <string name="fp_title">TRUCKLOG</string>
+    <string name="fp_subtitle">Панель управления</string>
+    <string name="fp_shift_earned">ЗАРАБОТОК ЗА СМЕНУ</string>
+    <string name="fp_rounds_balance">Кругов: %1$d\nБаланс: %2$s ₽</string>
+    <string name="fp_until_goal">До цели: %1$s ₽</string>
+    <string name="fp_start_shift">СНАЧАЛА НАЧНИ СМЕНУ</string>
+    <string name="fp_make_round">СДЕЛАЛ КРУГ  +%1$s ₽</string>
+    <string name="fp_undo_round">ОТМЕНИТЬ ПОСЛЕДНИЙ КРУГ</string>
+    <string name="fp_settings">ВЫПЛАТА И ЦЕЛЬ</string>
+    <string name="fp_pay_label">Выплата за круг</string>
+    <string name="fp_goal_label">Цель накоплений</string>
+    <string name="fp_reset_stats">СБРОСИТЬ БАЛАНС И КРУГИ</string>
+    <string name="fp_reset_confirm_title">Сбросить баланс и круги?</string>
+    <string name="fp_reset_confirm_msg">Будут обнулены только текущий баланс, количество кругов, заработок и таймер смены. История и графики останутся.</string>
+    <string name="fp_enter_numbers">Введи корректные числа</string>
+    <string name="fp_start_shift_first">Сначала начни смену в приложении</string>
+    <string name="fp_round_added">Круг добавлен</string>
+    <string name="fp_round_undone">Круг отменён</string>
+    <string name="fp_shift_reset">Баланс и круги сброшены. История сохранена.</string>
+    <string name="fp_cannot_add">Невозможно добавить круг</string>
+    <string name="fp_cannot_save_round">Не удалось сохранить круг. Попробуй ещё раз.</string>
+    <string name="fp_cannot_undo">Не удалось безопасно отменить круг</string>
+    <string name="fp_undo_not_found">Запись круга не найдена</string>
+    <string name="fp_undo_counters_error">Запись удалена, но счётчики не удалось сохранить</string>
+    <string name="fp_error">Ошибка</string>
+    <string name="fp_reset_failed">Не удалось сохранить изменения. Попробуй ещё раз.</string>
+    <string name="fp_reset_dialog_fail">Не удалось открыть окно сброса</string>
+</resources>
