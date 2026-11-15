@@ -20,7 +20,7 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         
-        body { background-color: #0E0B17; color: #FFFFFF; line-height: 1.6; }
+        body { background-color: #0E0B17; color: #FFFFFF; line-height: 1.6; overflow-x: hidden; }
         .container { max-width: 1000px; margin: 0 auto; padding: 20px; }
         header { text-align: center; padding: 60px 20px; background: radial-gradient(circle at center, #1A1428 0%, #0E0B17 100%); border-bottom: 2px solid #8B4DEB; }
         
@@ -30,6 +30,31 @@
         .subtitle { font-size: 1rem; color: #9A8FB5; margin-bottom: 30px; font-style: italic; }
         
         .section-title { text-align: center; font-size: 2rem; margin: 40px 0 20px; color: #8B4DEB; }
+
+        /* --- АНИМАЦИЯ ПОЯВЛЕНИЯ --- */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+        }
+        .fade-in.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* --- ЭФФЕКТ ПОДНЯТИЯ КАРТОЧЕК --- */
+        .about-card, .who-card, .comp-col, .roadmap-item, .faq-item {
+            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+        }
+        .about-card:hover, .who-card:hover, .comp-col:hover, .faq-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(139, 77, 235, 0.15);
+            border-color: #8B4DEB;
+        }
+        .roadmap-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 10px 25px rgba(139, 77, 235, 0.15);
+        }
         
         /* ВВОДНЫЙ ТЕКСТ */
         .about-intro {
@@ -64,7 +89,7 @@
             flex-shrink: 0; 
             display: block; 
             object-fit: cover; 
-            pointer-events: none; /* Картинка не перехватывает клики */
+            pointer-events: none;
             -webkit-user-drag: none;
             user-select: none;
         }
@@ -89,8 +114,7 @@
 
         /* СЕТКА О ПРИЛОЖЕНИИ */
         .about-section { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 60px; }
-        .about-card { background: #1A1428; padding: 25px; border-radius: 20px; border: 1px solid #24121A; display: flex; gap: 15px; align-items: flex-start; transition: border-color 0.3s; }
-        .about-card:hover { border-color: #8B4DEB; }
+        .about-card { background: #1A1428; padding: 25px; border-radius: 20px; border: 1px solid #24121A; display: flex; gap: 15px; align-items: flex-start; }
         .about-icon { font-size: 2rem; background: rgba(139, 77, 235, 0.1); padding: 10px; border-radius: 15px; }
         .about-text h4 { color: #8B4DEB; margin-bottom: 8px; font-size: 1.1rem; }
         .about-text p { color: #9A8FB5; font-size: 0.95rem; margin: 0; }
@@ -101,6 +125,21 @@
         .who-card .who-icon { font-size: 3rem; margin-bottom: 15px; }
         .who-card h4 { color: #8B4DEB; margin-bottom: 10px; }
         .who-card p { color: #9A8FB5; font-size: 0.95rem; }
+
+        /* НОВЫЙ БЛОК СОГЛАСОВАНИЯ */
+        .admin-banner {
+            background: linear-gradient(135deg, #1A1428 0%, #11213D 100%);
+            border: 1px solid #3B82F6;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 60px;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        .admin-icon { font-size: 3rem; }
+        .admin-text h4 { color: #3B82F6; font-size: 1.3rem; margin-bottom: 10px; }
+        .admin-text p { color: #9A8FB5; font-size: 1rem; margin: 0; }
 
         /* ДОРОЖНАЯ КАРТА */
         .roadmap { margin-bottom: 60px; }
@@ -143,6 +182,7 @@
 
         @media (max-width: 600px) {
             .comparison { grid-template-columns: 1fr; }
+            .admin-banner { flex-direction: column; text-align: center; }
         }
     </style>
 </head>
@@ -160,13 +200,13 @@
     <div class="container">
         
         <!-- 2. ВВОДНЫЙ ТЕКСТ -->
-        <div class="about-intro">
+        <div class="about-intro fade-in">
             <p><strong>TruckLog</strong> — это не просто калькулятор, а полноценный инструмент для тех, кто зарабатывает на жизнь перевозками в игровых мирах. Мы устали записывать рейсы в блокнот и считать деньги на калькуляторе телефона, поэтому создали приложение, которое берёт всю рутину на себя. Оно работает незаметно, позволяет сосредоточиться на игре и всегда держит твою статистику под рукой.</p>
         </div>
 
         <!-- 3. КАК ЭТО ВЫГЛЯДИТ -->
-        <h2 class="section-title">Как это выглядит</h2>
-        <div class="phone-mockup" id="carousel">
+        <h2 class="section-title fade-in">Как это выглядит</h2>
+        <div class="phone-mockup fade-in" id="carousel">
             <div class="screen">
                 <div class="dynamic-island"></div>
                 <div class="glare"></div>
@@ -181,7 +221,7 @@
                 <div class="click-zone click-right" onclick="moveSlide(1)"></div>
             </div>
         </div>
-        <div class="dots">
+        <div class="dots fade-in">
             <span class="dot active" onclick="currentSlide(0)"></span>
             <span class="dot" onclick="currentSlide(1)"></span>
             <span class="dot" onclick="currentSlide(2)"></span>
@@ -190,8 +230,8 @@
         </div>
 
         <!-- 4. БЛОКНОТ ПРОТИВ TRUCKLOG -->
-        <h2 class="section-title">Блокнот против TruckLog</h2>
-        <div class="comparison">
+        <h2 class="section-title fade-in">Блокнот против TruckLog</h2>
+        <div class="comparison fade-in">
             <div class="comp-col comp-bad">
                 <h3>❌ Обычный блокнот</h3>
                 <ul class="comp-list">
@@ -215,8 +255,8 @@
         </div>
 
         <!-- 5. ВСЕ, ЧТО УМЕЕТ -->
-        <h2 class="section-title">Всё, что умеет TruckLog</h2>
-        <div class="about-section">
+        <h2 class="section-title fade-in">Всё, что умеет TruckLog</h2>
+        <div class="about-section fade-in">
             <div class="about-card">
                 <div class="about-icon">📊</div>
                 <div class="about-text"><h4>Учёт рейсов и заработка</h4><p>Фиксируй каждый круг, и приложение автоматически посчитает баланс, количество рейсов и время.</p></div>
@@ -244,8 +284,8 @@
         </div>
 
         <!-- 6. ДЛЯ КОГО -->
-        <h2 class="section-title">Для кого это приложение</h2>
-        <div class="for-who">
+        <h2 class="section-title fade-in">Для кого это приложение</h2>
+        <div class="for-who fade-in">
             <div class="who-card">
                 <div class="who-icon">🚛</div>
                 <h4>Для новичков</h4>
@@ -263,9 +303,18 @@
             </div>
         </div>
 
+        <!-- 6.5 СОГЛАСОВАНИЕ С АДМИНИСТРАЦИЕЙ -->
+        <div class="admin-banner fade-in">
+            <div class="admin-icon">🤝</div>
+            <div class="admin-text">
+                <h4>Согласование с администрацией</h4>
+                <p>Мы за честную игру! TruckLog создан исключительно как помощник для учёта. Мы направили официальное обращение к разработчикам игрового проекта с просьбой подтвердить, что приложение не нарушает правила. Мы не читаем память игры и не даём преимуществ.</p>
+            </div>
+        </div>
+
         <!-- 7. ПЛАНЫ НА БУДУЩЕЕ -->
-        <h2 class="section-title">Планы на будущее</h2>
-        <div class="roadmap">
+        <h2 class="section-title fade-in">Планы на будущее</h2>
+        <div class="roadmap fade-in">
             <div class="roadmap-item">
                 <div class="roadmap-icon">🗺</div>
                 <div class="roadmap-text">
@@ -289,9 +338,9 @@
             </div>
         </div>
 
-        <!-- 8. ИНСТРУКЦИЯ И КНОПКА -->
-        <h2 class="section-title">Инструкция по установке</h2>
-        <div class="instruction">
+        <!-- 8. ИНСТРУКЦИЯ -->
+        <h2 class="section-title fade-in">Инструкция по установке</h2>
+        <div class="instruction fade-in">
             <ol>
                 <li>Нажми на кнопку <span>«Скачать TruckLog»</span> ниже и дождись окончания загрузки.</li>
                 <li>Открой скачанный файл <span>TruckLog.apk</span>.</li>
@@ -305,7 +354,7 @@
         </div>
 
         <!-- 9. БЕЗОПАСНОСТЬ -->
-        <div class="security-banner">
+        <div class="security-banner fade-in">
             <div class="security-icon">🛡</div>
             <div class="security-text">
                 <h4>Безопасно и без вирусов</h4>
@@ -314,8 +363,8 @@
         </div>
 
         <!-- 10. FAQ -->
-        <h2 class="section-title">Частые вопросы</h2>
-        <div class="faq-list">
+        <h2 class="section-title fade-in">Частые вопросы</h2>
+        <div class="faq-list fade-in">
             <div class="faq-item" onclick="this.classList.toggle('active')">
                 <div class="faq-question">Банят ли за использование TruckLog? <span>+</span></div>
                 <div class="faq-answer">Нет. Приложение не является читом. Оно не читает память игры, не автоматизирует процессы и не даёт нечестного преимущества. Ты сам нажимаешь кнопку «Сделал круг».</div>
@@ -339,7 +388,7 @@
         </div>
 
         <!-- 11. ОБРАТНАЯ СВЯЗЬ -->
-        <div class="contact">
+        <div class="contact fade-in">
             <h2 class="section-title">Нашёл баг или есть идея?</h2>
             <p style="color: #9A8FB5; margin-bottom: 20px;">Напиши мне в Telegram или поделись сайтом с друзьями</p>
             <a href="https://t.me/yudzhen21" class="btn-contact" target="_blank">Написать в Telegram</a>
@@ -356,6 +405,7 @@
 
     <!-- СКРИПТЫ -->
     <script>
+        // КАРУСЕЛЬ
         let slideIndex = 0;
         const slides = document.getElementById("slide");
         const dots = document.getElementsByClassName("dot");
@@ -393,6 +443,7 @@
             if (touchEndX > touchStartX + 50) moveSlide(-1);
         }
 
+        // ПОДЕЛИТЬСЯ
         function shareSite() {
             if (navigator.share) {
                 navigator.share({
@@ -405,6 +456,19 @@
                 alert('Ссылка на сайт скопирована в буфер обмена!');
             }
         }
+
+        // АНИМАЦИЯ ПОЯВЛЕНИЯ ПРИ СКРОЛЛЕ
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.fade-in').forEach(el => {
+            observer.observe(el);
+        });
     </script>
 </body>
-                   </html>
+</html>
