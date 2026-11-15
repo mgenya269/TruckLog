@@ -17,20 +17,65 @@
         
         .section-title { text-align: center; font-size: 2rem; margin: 40px 0 20px; color: #8B4DEB; }
         
-        /* КАРУСЕЛЬ И МОКАПЫ */
-        .carousel-container {
+        /* РЕАЛИСТИЧНЫЙ IPHONE МОКАП */
+        .phone-mockup {
             position: relative;
-            max-width: 280px;
+            max-width: 300px;
             margin: 0 auto;
-            border-radius: 36px;
-            border: 8px solid #24121A; /* Рамка телефона */
-            background: #000;
-            overflow: hidden;
-            box-shadow: 0 0 40px rgba(139, 77, 235, 0.3);
+            padding: 12px;
+            background: #111;
+            border-radius: 45px;
+            box-shadow: 
+                inset 0 0 0 2px #333,
+                inset 0 0 0 6px #000,
+                0 20px 50px rgba(0,0,0,0.8),
+                0 0 40px rgba(139, 77, 235, 0.3);
             cursor: pointer;
         }
+        
+        /* Кнопки на корпусе */
+        .phone-mockup::before, .phone-mockup::after {
+            content: '';
+            position: absolute;
+            background: #222;
+            border-radius: 2px;
+        }
+        .phone-mockup::before { width: 3px; height: 25px; left: -5px; top: 80px; } /* Левая кнопка */
+        .phone-mockup::after { width: 3px; height: 40px; right: -5px; top: 100px; } /* Правая кнопка */
+
+        .screen {
+            position: relative;
+            border-radius: 35px;
+            overflow: hidden;
+            background: #000;
+            aspect-ratio: 9 / 19.5; /* Пропорции реального iPhone */
+        }
+        
+        /* Динамический остров (Dynamic Island) */
+        .dynamic-island {
+            position: absolute;
+            top: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90px;
+            height: 25px;
+            background: #000;
+            border-radius: 20px;
+            z-index: 20;
+        }
+        
+        /* Блик на экране */
+        .glare {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 40%);
+            pointer-events: none;
+            z-index: 15;
+        }
+
         .carousel-slide {
             display: flex;
+            height: 100%;
             transition: transform 0.4s ease-in-out;
         }
         .carousel-slide img {
@@ -38,6 +83,7 @@
             flex-shrink: 0;
             display: block;
             pointer-events: none;
+            object-fit: cover;
         }
         
         .click-zone { position: absolute; top: 0; bottom: 0; width: 50%; z-index: 10; }
@@ -57,7 +103,21 @@
         .feature-card h3 { color: #8B4DEB; margin-bottom: 15px; font-size: 1.4rem; }
         .feature-card p { color: #9A8FB5; }
 
-        /* БЕЗОПАСНОСТЬ */
+        /* ИНСТРУКЦИЯ */
+        .instruction { background: #1A1428; padding: 30px; border-radius: 20px; border: 1px solid #24121A; margin-bottom: 40px; }
+        .instruction ol { padding-left: 20px; color: #9A8FB5; }
+        .instruction li { margin-bottom: 10px; }
+        .instruction span { color: #8B4DEB; font-weight: bold; }
+        
+        .download-section { text-align: center; margin-top: 30px; margin-bottom: 20px; }
+        .btn-download { 
+            display: inline-block; background: #8B4DEB; color: white; padding: 18px 50px; 
+            font-size: 1.4rem; font-weight: bold; border-radius: 50px; text-decoration: none; 
+            box-shadow: 0 0 20px rgba(139, 77, 235, 0.6); transition: transform 0.2s, box-shadow 0.2s; 
+        }
+        .btn-download:hover { transform: scale(1.05); box-shadow: 0 0 40px rgba(139, 77, 235, 1); }
+
+        /* БЕЗОПАСНОСТЬ (ПОД КНОПКОЙ) */
         .security-banner {
             background: rgba(34, 197, 94, 0.1);
             border: 1px solid #22C55E;
@@ -66,13 +126,14 @@
             display: flex;
             align-items: center;
             gap: 15px;
-            margin-bottom: 40px;
+            margin: 30px auto 40px auto;
+            max-width: 600px;
         }
         .security-icon { font-size: 2rem; }
         .security-text h4 { color: #22C55E; margin-bottom: 5px; font-size: 1.2rem; }
         .security-text p { color: #9A8FB5; font-size: 0.95rem; margin: 0; }
 
-        /* FAQ */
+        /* FAQ (В САМОМ НИЗУ) */
         .faq-list { margin-bottom: 40px; }
         .faq-item {
             background: #1A1428;
@@ -105,23 +166,9 @@
         }
         .faq-item.active .faq-question { color: #8B4DEB; }
 
-        /* ИНСТРУКЦИЯ И НОВАЯ КНОПКА */
-        .instruction { background: #1A1428; padding: 30px; border-radius: 20px; border: 1px solid #24121A; margin-bottom: 40px; }
-        .instruction ol { padding-left: 20px; color: #9A8FB5; }
-        .instruction li { margin-bottom: 10px; }
-        .instruction span { color: #8B4DEB; font-weight: bold; }
-        
-        .download-section { text-align: center; margin-top: 30px; margin-bottom: 20px; }
-        .btn-download { 
-            display: inline-block; background: #8B4DEB; color: white; padding: 18px 50px; 
-            font-size: 1.4rem; font-weight: bold; border-radius: 50px; text-decoration: none; 
-            box-shadow: 0 0 20px rgba(139, 77, 235, 0.6); transition: transform 0.2s, box-shadow 0.2s; 
-        }
-        .btn-download:hover { transform: scale(1.05); box-shadow: 0 0 40px rgba(139, 77, 235, 1); }
-
         /* СВЯЗЬ И ПОДЕЛИТЬСЯ */
         .contact { text-align: center; margin: 40px 0; }
-        .btn-contact { display: inline-block; background: transparent; color: #8B4DEB; padding: 12px 30px; font-size: 1rem; font-weight: bold; border: 2px solid #8B4DEB; border-radius: 50px; text-decoration: none; transition: background 0.3s, color 0.3s; margin: 5px; }
+        .btn-contact { display: inline-block; background: transparent; color: #8B4DEB; padding: 12px 30px; font-size: 1rem; font-weight: bold; border: 2px solid #8B4DEB; border-radius: 50px; text-decoration: none; transition: background 0.3s, color 0.3s; margin: 5px; cursor: pointer; }
         .btn-contact:hover { background: #8B4DEB; color: white; }
 
         footer { text-align: center; padding: 40px; color: #9A8FB5; border-top: 1px solid #1A1428; margin-top: 60px; }
@@ -143,16 +190,20 @@
         <!-- КАРУСЕЛЬ -->
         <h2 class="section-title">Как это выглядит</h2>
         
-        <div class="carousel-container" id="carousel">
-            <div class="carousel-slide" id="slide">
-                <img src="https://raw.githubusercontent.com/mgenya269/TruckLog/93d883d9e91b13cd341014b322e14d5a548db00b/screen1.jpg" alt="Главный экран">
-                <img src="https://raw.githubusercontent.com/mgenya269/TruckLog/93d883d9e91b13cd341014b322e14d5a548db00b/screen2.jpg" alt="Статистика">
-                <img src="https://raw.githubusercontent.com/mgenya269/TruckLog/93d883d9e91b13cd341014b322e14d5a548db00b/screen3.jpg" alt="История">
-                <img src="https://raw.githubusercontent.com/mgenya269/TruckLog/93d883d9e91b13cd341014b322e14d5a548db00b/screen4.jpg" alt="Цели">
-                <img src="https://raw.githubusercontent.com/mgenya269/TruckLog/93d883d9e91b13cd341014b322e14d5a548db00b/screen5.jpg" alt="Настройки">
+        <div class="phone-mockup" id="carousel">
+            <div class="screen">
+                <div class="dynamic-island"></div>
+                <div class="glare"></div>
+                <div class="carousel-slide" id="slide">
+                    <img src="https://raw.githubusercontent.com/mgenya269/TruckLog/93d883d9e91b13cd341014b322e14d5a548db00b/screen1.jpg" alt="Главный экран">
+                    <img src="https://raw.githubusercontent.com/mgenya269/TruckLog/93d883d9e91b13cd341014b322e14d5a548db00b/screen2.jpg" alt="Статистика">
+                    <img src="https://raw.githubusercontent.com/mgenya269/TruckLog/93d883d9e91b13cd341014b322e14d5a548db00b/screen3.jpg" alt="История">
+                    <img src="https://raw.githubusercontent.com/mgenya269/TruckLog/93d883d9e91b13cd341014b322e14d5a548db00b/screen4.jpg" alt="Цели">
+                    <img src="https://raw.githubusercontent.com/mgenya269/TruckLog/93d883d9e91b13cd341014b322e14d5a548db00b/screen5.jpg" alt="Настройки">
+                </div>
+                <div class="click-zone click-left" onclick="moveSlide(-1)"></div>
+                <div class="click-zone click-right" onclick="moveSlide(1)"></div>
             </div>
-            <div class="click-zone click-left" onclick="moveSlide(-1)"></div>
-            <div class="click-zone click-right" onclick="moveSlide(1)"></div>
         </div>
         
         <div class="dots">
@@ -161,15 +212,6 @@
             <span class="dot" onclick="currentSlide(2)"></span>
             <span class="dot" onclick="currentSlide(3)"></span>
             <span class="dot" onclick="currentSlide(4)"></span>
-        </div>
-
-        <!-- БЕЗОПАСНОСТЬ -->
-        <div class="security-banner">
-            <div class="security-icon">🛡</div>
-            <div class="security-text">
-                <h4>Безопасно и без вирусов</h4>
-                <p>Приложение не требует доступ к личным данным, не читает память игры и не является читом. Исходный код полностью открыт. Никакой рекламы и скрытых платежей.</p>
-            </div>
         </div>
 
         <!-- ФИЧИ -->
@@ -192,7 +234,32 @@
             </div>
         </section>
 
-        <!-- FAQ -->
+        <!-- ИНСТРУКЦИЯ И КНОПКА СКАЧИВАНИЯ -->
+        <h2 class="section-title">Инструкция по установке</h2>
+        <div class="instruction">
+            <ol>
+                <li>Нажми на кнопку <span>«Скачать TruckLog»</span> ниже и дождись окончания загрузки.</li>
+                <li>Открой скачанный файл <span>TruckLog.apk</span>.</li>
+                <li>Если телефон спросит про <span>«Неизвестные источники»</span>, разреши установку (это стандартно для всех APK вне Play Market).</li>
+                <li>Нажми <span>«Установить»</span> и дождись завершения.</li>
+                <li>Открой приложение, разреши уведомления и доступ к <span>«Поверх других окон»</span> (для плавающей панели).</li>
+            </ol>
+            
+            <div class="download-section">
+                <a href="https://github.com/mgenya269/TruckLog/releases/download/v1.0/TruckLog.apk" class="btn-download">Скачать TruckLog</a>
+            </div>
+        </div>
+
+        <!-- БЕЗОПАСНОСТЬ (ПОД КНОПКОЙ) -->
+        <div class="security-banner">
+            <div class="security-icon">🛡</div>
+            <div class="security-text">
+                <h4>Безопасно и без вирусов</h4>
+                <p>Приложение не требует доступ к личным данным, не читает память игры и не является читом. Исходный код полностью открыт. Никакой рекламы и скрытых платежей.</p>
+            </div>
+        </div>
+
+        <!-- FAQ (В САМОМ НИЗУ) -->
         <h2 class="section-title">Частые вопросы</h2>
         <div class="faq-list">
             <div class="faq-item" onclick="this.classList.toggle('active')">
@@ -214,22 +281,6 @@
             <div class="faq-item" onclick="this.classList.toggle('active')">
                 <div class="faq-question">Приложение платное? <span>+</span></div>
                 <div class="faq-answer">Нет. TruckLog — полностью бесплатное приложение. В нём нет рекламы, скрытых подписок и донатов.</div>
-            </div>
-        </div>
-
-        <!-- ИНСТРУКЦИЯ И КНОПКА СКАЧИВАНИЯ -->
-        <h2 class="section-title">Инструкция по установке</h2>
-        <div class="instruction">
-            <ol>
-                <li>Нажми на кнопку <span>«Скачать TruckLog»</span> ниже и дождись окончания загрузки.</li>
-                <li>Открой скачанный файл <span>TruckLog.apk</span>.</li>
-                <li>Если телефон спросит про <span>«Неизвестные источники»</span>, разреши установку (это стандартно для всех APK вне Play Market).</li>
-                <li>Нажми <span>«Установить»</span> и дождись завершения.</li>
-                <li>Открой приложение, разреши уведомления и доступ к <span>«Поверх других окон»</span> (для плавающей панели).</li>
-            </ol>
-            
-            <div class="download-section">
-                <a href="https://github.com/mgenya269/TruckLog/releases/download/v1.0/TruckLog.apk" class="btn-download">Скачать TruckLog</a>
             </div>
         </div>
 
@@ -304,7 +355,6 @@
                     url: window.location.href
                 }).catch(console.error);
             } else {
-                // Если браузер не поддерживает - копируем в буфер
                 navigator.clipboard.writeText(window.location.href);
                 alert('Ссылка на сайт скопирована в буфер обмена!');
             }
