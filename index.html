@@ -17,15 +17,16 @@
         
         .section-title { text-align: center; font-size: 2rem; margin: 40px 0 20px; color: #8B4DEB; }
         
-        /* КАРУСЕЛЬ */
+        /* КАРУСЕЛЬ И МОКАПЫ */
         .carousel-container {
             position: relative;
-            max-width: 320px;
+            max-width: 280px;
             margin: 0 auto;
-            border-radius: 24px;
-            border: 2px solid #8B4DEB;
+            border-radius: 36px;
+            border: 8px solid #24121A; /* Рамка телефона */
+            background: #000;
             overflow: hidden;
-            box-shadow: 0 0 30px rgba(139, 77, 235, 0.2);
+            box-shadow: 0 0 40px rgba(139, 77, 235, 0.3);
             cursor: pointer;
         }
         .carousel-slide {
@@ -39,30 +40,14 @@
             pointer-events: none;
         }
         
-        .click-zone {
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            width: 50%;
-            z-index: 10;
-        }
+        .click-zone { position: absolute; top: 0; bottom: 0; width: 50%; z-index: 10; }
         .click-left { left: 0; }
         .click-right { right: 0; }
         
-        .dots {
-            text-align: center;
-            margin-top: 20px;
-            margin-bottom: 40px;
-        }
+        .dots { text-align: center; margin-top: 20px; margin-bottom: 40px; }
         .dot {
-            cursor: pointer;
-            height: 12px;
-            width: 12px;
-            margin: 0 5px;
-            background-color: #24121A;
-            border-radius: 50%;
-            display: inline-block;
-            transition: background-color 0.3s;
+            cursor: pointer; height: 12px; width: 12px; margin: 0 5px;
+            background-color: #24121A; border-radius: 50%; display: inline-block; transition: background-color 0.3s;
         }
         .dot.active { background-color: #8B4DEB; box-shadow: 0 0 10px #8B4DEB; }
 
@@ -72,42 +57,71 @@
         .feature-card h3 { color: #8B4DEB; margin-bottom: 15px; font-size: 1.4rem; }
         .feature-card p { color: #9A8FB5; }
 
-        /* ИНСТРУКЦИЯ И НОВАЯ КНОПКА */
-        .instruction { 
-            background: #1A1428; 
-            padding: 30px; 
-            border-radius: 20px; 
-            border: 1px solid #24121A; 
-            margin-bottom: 40px; 
+        /* БЕЗОПАСНОСТЬ */
+        .security-banner {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid #22C55E;
+            border-radius: 15px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 40px;
         }
+        .security-icon { font-size: 2rem; }
+        .security-text h4 { color: #22C55E; margin-bottom: 5px; font-size: 1.2rem; }
+        .security-text p { color: #9A8FB5; font-size: 0.95rem; margin: 0; }
+
+        /* FAQ */
+        .faq-list { margin-bottom: 40px; }
+        .faq-item {
+            background: #1A1428;
+            border-radius: 15px;
+            margin-bottom: 10px;
+            border: 1px solid #24121A;
+            overflow: hidden;
+        }
+        .faq-question {
+            padding: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            color: #FFFFFF;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .faq-question:hover { color: #8B4DEB; }
+        .faq-answer {
+            padding: 0 20px;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+            color: #9A8FB5;
+            font-size: 0.95rem;
+        }
+        .faq-item.active .faq-answer {
+            max-height: 300px;
+            padding: 0 20px 20px 20px;
+        }
+        .faq-item.active .faq-question { color: #8B4DEB; }
+
+        /* ИНСТРУКЦИЯ И НОВАЯ КНОПКА */
+        .instruction { background: #1A1428; padding: 30px; border-radius: 20px; border: 1px solid #24121A; margin-bottom: 40px; }
         .instruction ol { padding-left: 20px; color: #9A8FB5; }
         .instruction li { margin-bottom: 10px; }
         .instruction span { color: #8B4DEB; font-weight: bold; }
         
-        .download-section {
-            text-align: center;
-            margin-top: 30px;
-            margin-bottom: 60px;
-        }
+        .download-section { text-align: center; margin-top: 30px; margin-bottom: 20px; }
         .btn-download { 
-            display: inline-block; 
-            background: #8B4DEB; 
-            color: white; 
-            padding: 18px 50px; 
-            font-size: 1.4rem; 
-            font-weight: bold; 
-            border-radius: 50px; 
-            text-decoration: none; 
-            box-shadow: 0 0 20px rgba(139, 77, 235, 0.6); 
-            transition: transform 0.2s, box-shadow 0.2s; 
+            display: inline-block; background: #8B4DEB; color: white; padding: 18px 50px; 
+            font-size: 1.4rem; font-weight: bold; border-radius: 50px; text-decoration: none; 
+            box-shadow: 0 0 20px rgba(139, 77, 235, 0.6); transition: transform 0.2s, box-shadow 0.2s; 
         }
-        .btn-download:hover { 
-            transform: scale(1.05); 
-            box-shadow: 0 0 40px rgba(139, 77, 235, 1); 
-        }
+        .btn-download:hover { transform: scale(1.05); box-shadow: 0 0 40px rgba(139, 77, 235, 1); }
 
+        /* СВЯЗЬ И ПОДЕЛИТЬСЯ */
         .contact { text-align: center; margin: 40px 0; }
-        .btn-contact { display: inline-block; background: transparent; color: #8B4DEB; padding: 12px 30px; font-size: 1rem; font-weight: bold; border: 2px solid #8B4DEB; border-radius: 50px; text-decoration: none; transition: background 0.3s, color 0.3s; }
+        .btn-contact { display: inline-block; background: transparent; color: #8B4DEB; padding: 12px 30px; font-size: 1rem; font-weight: bold; border: 2px solid #8B4DEB; border-radius: 50px; text-decoration: none; transition: background 0.3s, color 0.3s; margin: 5px; }
         .btn-contact:hover { background: #8B4DEB; color: white; }
 
         footer { text-align: center; padding: 40px; color: #9A8FB5; border-top: 1px solid #1A1428; margin-top: 60px; }
@@ -149,6 +163,15 @@
             <span class="dot" onclick="currentSlide(4)"></span>
         </div>
 
+        <!-- БЕЗОПАСНОСТЬ -->
+        <div class="security-banner">
+            <div class="security-icon">🛡</div>
+            <div class="security-text">
+                <h4>Безопасно и без вирусов</h4>
+                <p>Приложение не требует доступ к личным данным, не читает память игры и не является читом. Исходный код полностью открыт. Никакой рекламы и скрытых платежей.</p>
+            </div>
+        </div>
+
         <!-- ФИЧИ -->
         <section class="features">
             <div class="feature-card">
@@ -169,6 +192,31 @@
             </div>
         </section>
 
+        <!-- FAQ -->
+        <h2 class="section-title">Частые вопросы</h2>
+        <div class="faq-list">
+            <div class="faq-item" onclick="this.classList.toggle('active')">
+                <div class="faq-question">Банят ли за использование TruckLog? <span>+</span></div>
+                <div class="faq-answer">Нет. Приложение не является читом. Оно не читает память игры, не автоматизирует процессы и не даёт нечестного преимущества. Ты сам нажимаешь кнопку «Сделал круг» после того, как завершил его в игре.</div>
+            </div>
+            <div class="faq-item" onclick="this.classList.toggle('active')">
+                <div class="faq-question">Почему антивирус или телефон ругается при установке? <span>+</span></div>
+                <div class="faq-answer">Это стандартная защита Android для любых файлов (APK), скачанных не из Google Play. В приложении нет вирусов. Ты можешь проверить это, посмотрев открытый исходный код проекта.</div>
+            </div>
+            <div class="faq-item" onclick="this.classList.toggle('active')">
+                <div class="faq-question">Как включить плавающую панель поверх игры? <span>+</span></div>
+                <div class="faq-answer">В настройках приложения (или на главном экране) нажми кнопку «Включить панель». Телефон попросит разрешение «Поверх других приложений» — разреши его. После этого появится иконка грузовика.</div>
+            </div>
+            <div class="faq-item" onclick="this.classList.toggle('active')">
+                <div class="faq-question">Куда сохраняется моя статистика? <span>+</span></div>
+                <div class="faq-answer">Все данные хранятся локально на твоём телефоне в базе данных SQLite. Они никуда не отправляются, и никто, кроме тебя, не имеет к ним доступа.</div>
+            </div>
+            <div class="faq-item" onclick="this.classList.toggle('active')">
+                <div class="faq-question">Приложение платное? <span>+</span></div>
+                <div class="faq-answer">Нет. TruckLog — полностью бесплатное приложение. В нём нет рекламы, скрытых подписок и донатов.</div>
+            </div>
+        </div>
+
         <!-- ИНСТРУКЦИЯ И КНОПКА СКАЧИВАНИЯ -->
         <h2 class="section-title">Инструкция по установке</h2>
         <div class="instruction">
@@ -180,17 +228,17 @@
                 <li>Открой приложение, разреши уведомления и доступ к <span>«Поверх других окон»</span> (для плавающей панели).</li>
             </ol>
             
-            <!-- НОВАЯ КНОПКА СКАЧИВАНИЯ -->
             <div class="download-section">
                 <a href="https://github.com/mgenya269/TruckLog/releases/download/v1.0/TruckLog.apk" class="btn-download">Скачать TruckLog</a>
             </div>
         </div>
 
-        <!-- ОБРАТНАЯ СВЯЗЬ -->
+        <!-- ОБРАТНАЯ СВЯЗЬ И ПОДЕЛИТЬСЯ -->
         <div class="contact">
             <h2 class="section-title">Нашёл баг или есть идея?</h2>
-            <p style="color: #9A8FB5; margin-bottom: 20px;">Напиши мне в Telegram</p>
+            <p style="color: #9A8FB5; margin-bottom: 20px;">Напиши мне в Telegram или поделись сайтом с друзьями</p>
             <a href="https://t.me/yudzhen21" class="btn-contact" target="_blank">Написать в Telegram</a>
+            <button class="btn-contact" onclick="shareSite()">Поделиться сайтом</button>
         </div>
 
     </div>
@@ -200,8 +248,9 @@
         <p>Автор: <span class="author">Yudzhen</span></p>
     </footer>
 
-    <!-- СКРИПТ КАРУСЕЛИ -->
+    <!-- СКРИПТЫ -->
     <script>
+        // КАРУСЕЛЬ
         let slideIndex = 0;
         const slides = document.getElementById("slide");
         const dots = document.getElementsByClassName("dot");
@@ -227,6 +276,7 @@
             dots[slideIndex].className += " active";
         }
 
+        // СВАЙПЫ ДЛЯ ТЕЛЕФОНА
         let touchStartX = 0;
         let touchEndX = 0;
         const carousel = document.getElementById("carousel");
@@ -243,6 +293,21 @@
         function handleSwipe() {
             if (touchEndX < touchStartX - 50) moveSlide(1);
             if (touchEndX > touchStartX + 50) moveSlide(-1);
+        }
+
+        // КНОПКА ПОДЕЛИТЬСЯ
+        function shareSite() {
+            if (navigator.share) {
+                navigator.share({
+                    title: 'TruckLog',
+                    text: 'Глянь, какое крутое приложение для учёта рейсов!',
+                    url: window.location.href
+                }).catch(console.error);
+            } else {
+                // Если браузер не поддерживает - копируем в буфер
+                navigator.clipboard.writeText(window.location.href);
+                alert('Ссылка на сайт скопирована в буфер обмена!');
+            }
         }
     </script>
 </body>
