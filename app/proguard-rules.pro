@@ -1,12 +1,24 @@
-# Разрешаем R8 переименовывать наши классы
-# (Мы не пишем -keep для com.matreshka.truckhelper, чтобы они стали a, b, c)
+# ==========================================
+# НАСТРОЙКИ R8 ДЛЯ TRUCKLOG
+# ==========================================
 
-# Защищаем только стандартные библиотеки, чтобы приложение не упало
--keep class org.json.** { *; }
+# ВАЖНО: Мы НЕ пишем сюда -keep для com.matreshka.truckhelper.
+# Благодаря этому R8 переименует все наши классы в a, b, c и удалит лишнее.
+
+# Оставляем стандартные классы Android, чтобы приложение не падало
 -keep class android.** { *; }
 -dontwarn android.**
--keep class android.database.** { *; }
 
-# Оставляем имена для отладки (если упадет - увидим где)
+# Оставляем стандартные классы Java и JSON
+-keep class java.** { *; }
+-dontwarn java.**
+-keep class org.json.** { *; }
+-dontwarn org.json.**
+
+# Оставляем классы для работы с базой данных SQLite
+-keep class android.database.** { *; }
+-dontwarn android.database.**
+
+# Оставляем имена файлов и строк для отладки
 -keepattributes SourceFile,LineNumberTable
 -keepattributes *Annotation*
