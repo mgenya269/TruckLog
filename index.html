@@ -97,7 +97,6 @@
             background: #111; border-radius: 45px;
             box-shadow: inset 0 0 0 2px #333, inset 0 0 0 6px #000, 0 20px 50px rgba(0,0,0,0.8), 0 0 40px rgba(139, 77, 235, 0.3);
             cursor: pointer;
-            /* Плавное появление телефона */
             transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.8s ease-out;
         }
         .phone-mockup.fade-in { transform: translateY(50px) scale(0.9); }
@@ -202,10 +201,10 @@
         .btn-download:hover { 
             transform: scale(1.05); 
             box-shadow: 0 0 40px rgba(139, 77, 235, 1); 
-            animation: none; /* Отключаем пульсацию при наведении */
+            animation: none;
         }
         .btn-download:active {
-            transform: scale(0.95); /* Эффект нажатия */
+            transform: scale(0.95);
         }
         
         @keyframes pulseGlow {
@@ -245,10 +244,80 @@
             cursor: pointer; 
         }
         .btn-contact:hover { background: #8B4DEB; color: white; }
-        .btn-contact:active { transform: scale(0.95); } /* Эффект нажатия */
+        .btn-contact:active { transform: scale(0.95); }
 
-        footer { text-align: center; padding: 40px; color: #9A8FB5; border-top: 1px solid #1A1428; margin-top: 60px; }
-        .author { color: #8B4DEB; font-weight: bold; }
+        /* --- ЮРИДИЧЕСКИЕ ССЫЛКИ --- */
+        .legal-links {
+            text-align: center;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            font-size: 0.85rem;
+            color: #9A8FB5;
+        }
+        .legal-links a {
+            color: #8B4DEB;
+            text-decoration: none;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: color 0.3s;
+        }
+        .legal-links a:hover { color: #FFF; text-decoration: underline; }
+
+        /* МОДАЛЬНОЕ ОКНО */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-content {
+            background: #1A1428;
+            border: 1px solid #8B4DEB;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+        }
+        .modal-close {
+            position: absolute;
+            top: 15px; right: 20px;
+            font-size: 1.5rem;
+            color: #8B4DEB;
+            cursor: pointer;
+            background: none;
+            border: none;
+        }
+        .modal-content h3 { color: #8B4DEB; margin-bottom: 15px; font-size: 1.4rem; }
+        .modal-content p { color: #9A8FB5; margin-bottom: 10px; font-size: 0.95rem; }
+
+        /* --- ПОДВАЛ --- */
+        footer { 
+            text-align: center; 
+            padding: 40px; 
+            color: #9A8FB5; 
+            border-top: 1px solid #1A1428; 
+            margin-top: 40px; 
+        }
+        .footer-author {
+            color: #8B4DEB;
+            font-weight: bold;
+            font-size: 1rem;
+            margin-bottom: 5px;
+        }
+        .footer-small {
+            font-size: 8px;
+            color: #444;
+            opacity: 0.5;
+            margin-top: 5px;
+        }
 
         @media (max-width: 600px) {
             .comparison { grid-template-columns: 1fr; }
@@ -465,13 +534,42 @@
             <button class="btn-contact" onclick="shareSite()">Поделиться сайтом</button>
         </div>
 
+        <!-- 11.5 ЮРИДИЧЕСКИЕ ССЫЛКИ -->
+        <div class="legal-links">
+            <a onclick="openModal('privacy')">Политика конфиденциальности</a> | 
+            <a onclick="openModal('terms')">Пользовательское соглашение</a>
+        </div>
+
     </div>
 
     <!-- 12. ПОДВАЛ -->
     <footer>
-        <p>© 2026 TruckLog. Разработано с душой.</p>
-        <p>Автор: <span class="author">Yudzhen</span></p>
+        <p class="footer-author">Автор: TruckLog</p>
+        <p class="footer-small">Yudzhen</p>
     </footer>
+
+    <!-- МОДАЛЬНЫЕ ОКНА (ЮРИДИЧЕСКИЕ ТЕКСТЫ) -->
+    <div class="modal-overlay" id="privacy-modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal('privacy')">&times;</button>
+            <h3>Политика конфиденциальности</h3>
+            <p><strong>1. Сбор данных:</strong> Приложение TruckLog не собирает, не передает и не хранит ваши персональные данные на сторонних серверах.</p>
+            <p><strong>2. Локальное хранение:</strong> Вся статистика (рейсы, баланс, настройки) хранится исключительно в локальной базе данных (SQLite) на вашем устройстве.</p>
+            <p><strong>3. Разрешения:</strong> Приложение запрашивает разрешение «Поверх других приложений» только для работы плавающей панели. Разрешение на уведомления используется для информирования о завершении рейсов.</p>
+            <p><strong>4. Аналитика:</strong> Мы не используем сторонние SDK для отслеживания ваших действий (Firebase, Google Analytics и т.д.).</p>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="terms-modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal('terms')">&times;</button>
+            <h3>Пользовательское соглашение</h3>
+            <p><strong>1. Назначение:</strong> Приложение TruckLog является вспомогательным инструментом для ручного учёта игровой статистики и не является частью игры.</p>
+            <p><strong>2. Отказ от ответственности:</strong> Приложение предоставляется «как есть» (as is). Разработчик не несёт ответственности за возможные блокировки аккаунта, вызванные нарушением правил игры со стороны пользователя, а также за потерю данных.</p>
+            <p><strong>3. Запрет на читы:</strong> TruckLog не читает память игры, не автоматизирует действия и не даёт нечестного преимущества. Использование стороннего ПО для автоматизации запрещено.</p>
+            <p><strong>4. Лицензия:</strong> Приложение распространяется бесплатно. Запрещена перепродажа или изменение приложения с целью монетизации без согласия автора.</p>
+        </div>
+    </div>
 
     <!-- СКРИПТЫ -->
     <script>
@@ -527,7 +625,7 @@
             }
         }
 
-        // АНИМАЦИЯ ПОЯВЛЕНИЯ ПРИ СКРОЛЛЕ (РАБОТАЕТ ВСЕГДА)
+        // АНИМАЦИЯ ПОЯВЛЕНИЯ ПРИ СКРОЛЛЕ
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
@@ -541,6 +639,24 @@
         document.querySelectorAll('.fade-in').forEach(el => {
             observer.observe(el);
         });
+
+        // МОДАЛЬНЫЕ ОКНА (ЮРИДИЧЕСКИЕ ТЕКСТЫ)
+        function openModal(type) {
+            document.getElementById(type + '-modal').classList.add('active');
+        }
+
+        function closeModal(type) {
+            document.getElementById(type + '-modal').classList.remove('active');
+        }
+
+        // Закрытие при клике вне окна
+        document.querySelectorAll('.modal-overlay').forEach(modal => {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.classList.remove('active');
+                }
+            });
+        });
     </script>
 </body>
-</html>
+    </html>
