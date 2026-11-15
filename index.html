@@ -15,9 +15,6 @@
         .slogan { font-size: 1.3rem; color: #9A8FB5; margin-bottom: 10px; font-weight: bold; }
         .subtitle { font-size: 1rem; color: #9A8FB5; margin-bottom: 30px; font-style: italic; }
         
-        .btn-download { display: inline-block; background: #8B4DEB; color: white; padding: 15px 40px; font-size: 1.2rem; font-weight: bold; border-radius: 50px; text-decoration: none; box-shadow: 0 0 20px rgba(139, 77, 235, 0.4); transition: transform 0.2s, box-shadow 0.2s; }
-        .btn-download:hover { transform: scale(1.05); box-shadow: 0 0 30px rgba(139, 77, 235, 0.8); }
-        
         .section-title { text-align: center; font-size: 2rem; margin: 40px 0 20px; color: #8B4DEB; }
         
         /* КАРУСЕЛЬ */
@@ -29,6 +26,7 @@
             border: 2px solid #8B4DEB;
             overflow: hidden;
             box-shadow: 0 0 30px rgba(139, 77, 235, 0.2);
+            cursor: pointer;
         }
         .carousel-slide {
             display: flex;
@@ -38,26 +36,19 @@
             width: 100%;
             flex-shrink: 0;
             display: block;
+            pointer-events: none;
         }
-        .carousel-btn {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            background: rgba(26, 20, 40, 0.7);
-            color: #8B4DEB;
-            border: 1px solid #8B4DEB;
-            font-size: 24px;
-            padding: 10px 15px;
-            cursor: pointer;
-            border-radius: 50%;
-            user-select: none;
-            transition: background 0.3s;
-        }
-        .carousel-btn:hover { background: rgba(139, 77, 235, 0.8); color: white; }
-        .prev { left: 10px; }
-        .next { right: 10px; }
         
-        /* ТОЧКИ ПОД КАРУСЕЛЬЮ */
+        .click-zone {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 50%;
+            z-index: 10;
+        }
+        .click-left { left: 0; }
+        .click-right { right: 0; }
+        
         .dots {
             text-align: center;
             margin-top: 20px;
@@ -81,10 +72,39 @@
         .feature-card h3 { color: #8B4DEB; margin-bottom: 15px; font-size: 1.4rem; }
         .feature-card p { color: #9A8FB5; }
 
-        .instruction { background: #1A1428; padding: 30px; border-radius: 20px; border: 1px solid #24121A; margin-bottom: 40px; }
+        /* ИНСТРУКЦИЯ И НОВАЯ КНОПКА */
+        .instruction { 
+            background: #1A1428; 
+            padding: 30px; 
+            border-radius: 20px; 
+            border: 1px solid #24121A; 
+            margin-bottom: 40px; 
+        }
         .instruction ol { padding-left: 20px; color: #9A8FB5; }
         .instruction li { margin-bottom: 10px; }
         .instruction span { color: #8B4DEB; font-weight: bold; }
+        
+        .download-section {
+            text-align: center;
+            margin-top: 30px;
+            margin-bottom: 60px;
+        }
+        .btn-download { 
+            display: inline-block; 
+            background: #8B4DEB; 
+            color: white; 
+            padding: 18px 50px; 
+            font-size: 1.4rem; 
+            font-weight: bold; 
+            border-radius: 50px; 
+            text-decoration: none; 
+            box-shadow: 0 0 20px rgba(139, 77, 235, 0.6); 
+            transition: transform 0.2s, box-shadow 0.2s; 
+        }
+        .btn-download:hover { 
+            transform: scale(1.05); 
+            box-shadow: 0 0 40px rgba(139, 77, 235, 1); 
+        }
 
         .contact { text-align: center; margin: 40px 0; }
         .btn-contact { display: inline-block; background: transparent; color: #8B4DEB; padding: 12px 30px; font-size: 1rem; font-weight: bold; border: 2px solid #8B4DEB; border-radius: 50px; text-decoration: none; transition: background 0.3s, color 0.3s; }
@@ -101,8 +121,6 @@
             <div class="logo">Truck<span>Log</span></div>
             <div class="slogan">Твой бортовой компьютер</div>
             <p class="subtitle">Качай. Считай. Зарабатывай. Никаких таблиц, только цифры.</p>
-            
-            <a href="https://github.com/mgenya269/TruckLog/releases/download/v1.0/TruckLog.apk" class="btn-download">Скачать APK</a>
         </div>
     </header>
 
@@ -111,7 +129,7 @@
         <!-- КАРУСЕЛЬ -->
         <h2 class="section-title">Как это выглядит</h2>
         
-        <div class="carousel-container">
+        <div class="carousel-container" id="carousel">
             <div class="carousel-slide" id="slide">
                 <img src="https://raw.githubusercontent.com/mgenya269/TruckLog/93d883d9e91b13cd341014b322e14d5a548db00b/screen1.jpg" alt="Главный экран">
                 <img src="https://raw.githubusercontent.com/mgenya269/TruckLog/93d883d9e91b13cd341014b322e14d5a548db00b/screen2.jpg" alt="Статистика">
@@ -119,11 +137,10 @@
                 <img src="https://raw.githubusercontent.com/mgenya269/TruckLog/93d883d9e91b13cd341014b322e14d5a548db00b/screen4.jpg" alt="Цели">
                 <img src="https://raw.githubusercontent.com/mgenya269/TruckLog/93d883d9e91b13cd341014b322e14d5a548db00b/screen5.jpg" alt="Настройки">
             </div>
-            <div class="carousel-btn prev" onclick="moveSlide(-1)">&#10094;</div>
-            <div class="carousel-btn next" onclick="moveSlide(1)">&#10095;</div>
+            <div class="click-zone click-left" onclick="moveSlide(-1)"></div>
+            <div class="click-zone click-right" onclick="moveSlide(1)"></div>
         </div>
         
-        <!-- ТОЧКИ -->
         <div class="dots">
             <span class="dot active" onclick="currentSlide(0)"></span>
             <span class="dot" onclick="currentSlide(1)"></span>
@@ -152,16 +169,21 @@
             </div>
         </section>
 
-        <!-- ИНСТРУКЦИЯ -->
+        <!-- ИНСТРУКЦИЯ И КНОПКА СКАЧИВАНИЯ -->
         <h2 class="section-title">Инструкция по установке</h2>
         <div class="instruction">
             <ol>
-                <li>Нажми на кнопку <span>«Скачать APK»</span> выше и дождись окончания загрузки.</li>
+                <li>Нажми на кнопку <span>«Скачать TruckLog»</span> ниже и дождись окончания загрузки.</li>
                 <li>Открой скачанный файл <span>TruckLog.apk</span>.</li>
                 <li>Если телефон спросит про <span>«Неизвестные источники»</span>, разреши установку (это стандартно для всех APK вне Play Market).</li>
                 <li>Нажми <span>«Установить»</span> и дождись завершения.</li>
                 <li>Открой приложение, разреши уведомления и доступ к <span>«Поверх других окон»</span> (для плавающей панели).</li>
             </ol>
+            
+            <!-- НОВАЯ КНОПКА СКАЧИВАНИЯ -->
+            <div class="download-section">
+                <a href="https://github.com/mgenya269/TruckLog/releases/download/v1.0/TruckLog.apk" class="btn-download">Скачать TruckLog</a>
+            </div>
         </div>
 
         <!-- ОБРАТНАЯ СВЯЗЬ -->
@@ -203,6 +225,24 @@
                 dots[i].className = dots[i].className.replace(" active", "");
             }
             dots[slideIndex].className += " active";
+        }
+
+        let touchStartX = 0;
+        let touchEndX = 0;
+        const carousel = document.getElementById("carousel");
+
+        carousel.addEventListener('touchstart', e => {
+            touchStartX = e.changedTouches[0].screenX;
+        }, {passive: true});
+
+        carousel.addEventListener('touchend', e => {
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipe();
+        }, {passive: true});
+
+        function handleSwipe() {
+            if (touchEndX < touchStartX - 50) moveSlide(1);
+            if (touchEndX > touchStartX + 50) moveSlide(-1);
         }
     </script>
 </body>
