@@ -10,7 +10,6 @@
         .container { max-width: 1000px; margin: 0 auto; padding: 20px; }
         header { text-align: center; padding: 60px 20px; background: radial-gradient(circle at center, #1A1428 0%, #0E0B17 100%); border-bottom: 2px solid #8B4DEB; }
         
-        /* Новый заголовок и слоган */
         .logo { font-size: 3.5rem; font-weight: 900; color: #FFFFFF; text-shadow: 0 0 20px #8B4DEB; margin-bottom: 10px; line-height: 1.2; }
         .logo span { color: #8B4DEB; }
         .slogan { font-size: 1.3rem; color: #9A8FB5; margin-bottom: 10px; font-weight: bold; }
@@ -21,6 +20,7 @@
         
         .section-title { text-align: center; font-size: 2rem; margin: 40px 0 20px; color: #8B4DEB; }
         
+        /* СКРИНШОТЫ */
         .screenshots { display: flex; gap: 20px; overflow-x: auto; padding-bottom: 20px; scroll-snap-type: x mandatory; justify-content: center; }
         .screenshots img { width: 250px; height: auto; border-radius: 20px; border: 2px solid #1A1428; scroll-snap-align: center; object-fit: cover; transition: border-color 0.3s; }
         .screenshots img:hover { border-color: #8B4DEB; }
@@ -42,36 +42,33 @@
 
         footer { text-align: center; padding: 40px; color: #9A8FB5; border-top: 1px solid #1A1428; margin-top: 60px; }
         .author { color: #8B4DEB; font-weight: bold; }
-        .badge { margin-top: 15px; }
     </style>
 </head>
 <body>
 
     <header>
         <div class="container">
-            <!-- НОВЫЙ ЗАГОЛОВОК -->
             <div class="logo">Truck<span>Log</span></div>
             <div class="slogan">Твой бортовой компьютер</div>
             <p class="subtitle">Качай. Считай. Зарабатывай. Никаких таблиц, только цифры.</p>
             
             <a href="https://github.com/mgenya269/TruckLog/releases/download/v1.0/TruckLog.apk" class="btn-download">Скачать APK</a>
-            
-            <div class="badge">
-                <img src="https://img.shields.io/github/downloads/mgenya269/TruckLog/total?color=8B4DEB&style=flat-square" alt="Скачиваний">
-            </div>
         </div>
     </header>
 
     <div class="container">
         
+        <!-- СКРИНШОТЫ (ТВОИ КАРТИНКИ) -->
         <h2 class="section-title">Как это выглядит</h2>
         <div class="screenshots">
-            <!-- ЗАМЕНИ ССЫЛКИ НА СВОИ КАРТИНКИ -->
-            <img src="https://via.placeholder.com/250x500/1A1428/8B4DEB?text=Главный+экран" alt="Главный экран">
-            <img src="https://via.placeholder.com/250x500/1A1428/8B4DEB?text=Статистика" alt="Статистика">
-            <img src="https://via.placeholder.com/250x500/1A1428/8B4DEB?text=Плавающая+панель" alt="Плавающая панель">
+            <img src="https://raw.githubusercontent.com/mgenya269/TruckLog/93d883d9e91b13cd341014b322e14d5a548db00b/screen1.jpg" alt="Главный экран">
+            <img src="https://raw.githubusercontent.com/mgenya269/TruckLog/93d883d9e91b13cd341014b322e14d5a548db00b/screen2.jpg" alt="Статистика">
+            <img src="https://raw.githubusercontent.com/mgenya269/TruckLog/93d883d9e91b13cd341014b322e14d5a548db00b/screen3.jpg" alt="История">
+            <img src="https://raw.githubusercontent.com/mgenya269/TruckLog/93d883d9e91b13cd341014b322e14d5a548db00b/screen4.jpg" alt="Цели">
+            <img src="https://raw.githubusercontent.com/mgenya269/TruckLog/93d883d9e91b13cd341014b322e14d5a548db00b/screen5.jpg" alt="Настройки">
         </div>
 
+        <!-- ФИЧИ -->
         <section class="features">
             <div class="feature-card">
                 <h3>📊 Учёт рейсов</h3>
@@ -91,6 +88,7 @@
             </div>
         </section>
 
+        <!-- ИНСТРУКЦИЯ -->
         <h2 class="section-title">Инструкция по установке</h2>
         <div class="instruction">
             <ol>
@@ -102,6 +100,7 @@
             </ol>
         </div>
 
+        <!-- ОБРАТНАЯ СВЯЗЬ -->
         <div class="contact">
             <h2 class="section-title">Нашёл баг или есть идея?</h2>
             <p style="color: #9A8FB5; margin-bottom: 20px;">Напиши мне в Discord или Telegram</p>
@@ -118,4 +117,4 @@
     </footer>
 
 </body>
-  </html>
+</html>
