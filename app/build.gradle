@@ -20,7 +20,7 @@ android {
             minifyEnabled true
             // Удаляем неиспользуемые ресурсы (картинки, строки)
             shrinkResources true
-            // Правила по умолчанию + твой файл (создадим ниже)
+            // Подключаем правила
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
