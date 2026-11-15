@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TruckLog — Твой бортовой компьютер</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #0E0B17; color: #FFFFFF; line-height: 1.6; }
+        .container { max-width: 1000px; margin: 0 auto; padding: 20px; }
+        header { text-align: center; padding: 60px 20px; background: radial-gradient(circle at center, #1A1428 0%, #0E0B17 100%); border-bottom: 2px solid #8B4DEB; }
+        
+        /* Новый заголовок и слоган */
+        .logo { font-size: 3.5rem; font-weight: 900; color: #FFFFFF; text-shadow: 0 0 20px #8B4DEB; margin-bottom: 10px; line-height: 1.2; }
+        .logo span { color: #8B4DEB; }
+        .slogan { font-size: 1.3rem; color: #9A8FB5; margin-bottom: 10px; font-weight: bold; }
+        .subtitle { font-size: 1rem; color: #9A8FB5; margin-bottom: 30px; font-style: italic; }
+        
+        .btn-download { display: inline-block; background: #8B4DEB; color: white; padding: 15px 40px; font-size: 1.2rem; font-weight: bold; border-radius: 50px; text-decoration: none; box-shadow: 0 0 20px rgba(139, 77, 235, 0.4); transition: transform 0.2s, box-shadow 0.2s; }
+        .btn-download:hover { transform: scale(1.05); box-shadow: 0 0 30px rgba(139, 77, 235, 0.8); }
+        
+        .section-title { text-align: center; font-size: 2rem; margin: 40px 0 20px; color: #8B4DEB; }
+        
+        .screenshots { display: flex; gap: 20px; overflow-x: auto; padding-bottom: 20px; scroll-snap-type: x mandatory; justify-content: center; }
+        .screenshots img { width: 250px; height: auto; border-radius: 20px; border: 2px solid #1A1428; scroll-snap-align: center; object-fit: cover; transition: border-color 0.3s; }
+        .screenshots img:hover { border-color: #8B4DEB; }
+
+        .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin: 60px 0; }
+        .feature-card { background: #1A1428; padding: 30px; border-radius: 20px; border: 1px solid #24121A; transition: border-color 0.3s; }
+        .feature-card:hover { border-color: #8B4DEB; }
+        .feature-card h3 { color: #8B4DEB; margin-bottom: 15px; font-size: 1.4rem; }
+        .feature-card p { color: #9A8FB5; }
+
+        .instruction { background: #1A1428; padding: 30px; border-radius: 20px; border: 1px solid #24121A; margin-bottom: 40px; }
+        .instruction ol { padding-left: 20px; color: #9A8FB5; }
+        .instruction li { margin-bottom: 10px; }
+        .instruction span { color: #8B4DEB; font-weight: bold; }
+
+        .contact { text-align: center; margin: 40px 0; }
+        .btn-contact { display: inline-block; background: transparent; color: #8B4DEB; padding: 12px 30px; font-size: 1rem; font-weight: bold; border: 2px solid #8B4DEB; border-radius: 50px; text-decoration: none; transition: background 0.3s, color 0.3s; }
+        .btn-contact:hover { background: #8B4DEB; color: white; }
+
+        footer { text-align: center; padding: 40px; color: #9A8FB5; border-top: 1px solid #1A1428; margin-top: 60px; }
+        .author { color: #8B4DEB; font-weight: bold; }
+        .badge { margin-top: 15px; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <!-- НОВЫЙ ЗАГОЛОВОК -->
+            <div class="logo">Truck<span>Log</span></div>
+            <div class="slogan">Твой бортовой компьютер</div>
+            <p class="subtitle">Качай. Считай. Зарабатывай. Никаких таблиц, только цифры.</p>
+            
+            <a href="https://github.com/mgenya269/TruckLog/releases/download/v1.0/TruckLog.apk" class="btn-download">Скачать APK</a>
+            
+            <div class="badge">
+                <img src="https://img.shields.io/github/downloads/mgenya269/TruckLog/total?color=8B4DEB&style=flat-square" alt="Скачиваний">
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <h2 class="section-title">Как это выглядит</h2>
+        <div class="screenshots">
+            <!-- ЗАМЕНИ ССЫЛКИ НА СВОИ КАРТИНКИ -->
+            <img src="https://via.placeholder.com/250x500/1A1428/8B4DEB?text=Главный+экран" alt="Главный экран">
+            <img src="https://via.placeholder.com/250x500/1A1428/8B4DEB?text=Статистика" alt="Статистика">
+            <img src="https://via.placeholder.com/250x500/1A1428/8B4DEB?text=Плавающая+панель" alt="Плавающая панель">
+        </div>
+
+        <section class="features">
+            <div class="feature-card">
+                <h3>📊 Учёт рейсов</h3>
+                <p>Фиксируй каждый круг, заработок и время. Приложение само считает баланс и прогресс.</p>
+            </div>
+            <div class="feature-card">
+                <h3>🚛 Плавающая панель</h3>
+                <p>Кнопка «Сделал круг» и таймер всегда на экране. Не нужно сворачивать игру.</p>
+            </div>
+            <div class="feature-card">
+                <h3>📈 Статистика</h3>
+                <p>Смотри графики за неделю, лучшие дни и количество кругов. Всё наглядно.</p>
+            </div>
+            <div class="feature-card">
+                <h3>🔒 Без рекламы</h3>
+                <p>Никаких баннеров и навязчивых роликов. Только твой заработок и ничего лишнего.</p>
+            </div>
+        </section>
+
+        <h2 class="section-title">Инструкция по установке</h2>
+        <div class="instruction">
+            <ol>
+                <li>Нажми на кнопку <span>«Скачать APK»</span> выше и дождись окончания загрузки.</li>
+                <li>Открой скачанный файл <span>TruckLog.apk</span>.</li>
+                <li>Если телефон спросит про <span>«Неизвестные источники»</span>, разреши установку (это стандартно для всех APK вне Play Market).</li>
+                <li>Нажми <span>«Установить»</span> и дождись завершения.</li>
+                <li>Открой приложение, разреши уведомления и доступ к <span>«Поверх других окон»</span> (для плавающей панели).</li>
+            </ol>
+        </div>
+
+        <div class="contact">
+            <h2 class="section-title">Нашёл баг или есть идея?</h2>
+            <p style="color: #9A8FB5; margin-bottom: 20px;">Напиши мне в Discord или Telegram</p>
+            <!-- ЗАМЕНИ ССЫЛКУ НА СВОЙ ДИСКОРД/ТЕЛЕГРАМ -->
+            <a href="https://t.me/твой_ник" class="btn-contact">Написать разработчику</a>
+        </div>
+
+    </div>
+
+    <footer>
+        <p>© 2026 TruckLog. Разработано с душой.</p>
+        <p>Автор: <span class="author">Yudzhen</span></p>
+        <p><a href="https://github.com/mgenya269/TruckLog" style="color: #8B4DEB; text-decoration: none;">Открытый исходный код на GitHub</a></p>
+    </footer>
+
+</body>
+  </html>
