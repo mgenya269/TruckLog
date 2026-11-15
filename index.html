@@ -22,8 +22,31 @@
         
         body { background-color: #0E0B17; color: #FFFFFF; line-height: 1.6; overflow-x: hidden; }
         .container { max-width: 1000px; margin: 0 auto; padding: 20px; }
-        header { text-align: center; padding: 60px 20px; background: radial-gradient(circle at center, #1A1428 0%, #0E0B17 100%); border-bottom: 2px solid #8B4DEB; }
         
+        /* --- ЖИВОЙ ФОН В ШАПКЕ --- */
+        header { 
+            text-align: center; 
+            padding: 80px 20px; 
+            position: relative;
+            overflow: hidden;
+            border-bottom: 2px solid #8B4DEB; 
+        }
+        header::before {
+            content: '';
+            position: absolute;
+            top: -50%; left: -50%; width: 200%; height: 200%;
+            background: radial-gradient(circle at 30% 50%, rgba(139, 77, 235, 0.15) 0%, transparent 40%),
+                        radial-gradient(circle at 70% 50%, rgba(185, 108, 255, 0.1) 0%, transparent 40%);
+            animation: moveBackground 15s infinite alternate ease-in-out;
+            z-index: 0;
+        }
+        header .container { position: relative; z-index: 1; }
+        
+        @keyframes moveBackground {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(5%, 5%) scale(1.1); }
+        }
+
         .logo { font-size: 3.5rem; font-weight: 900; color: #FFFFFF; text-shadow: 0 0 20px #8B4DEB; margin-bottom: 10px; line-height: 1.2; }
         .logo span { color: #8B4DEB; }
         .slogan { font-size: 1.3rem; color: #9A8FB5; margin-bottom: 10px; font-weight: bold; }
@@ -31,7 +54,7 @@
         
         .section-title { text-align: center; font-size: 2rem; margin: 40px 0 20px; color: #8B4DEB; }
 
-        /* --- АНИМАЦИЯ ПОЯВЛЕНИЯ --- */
+        /* --- АНИМАЦИЯ ПОЯВЛЕНИЯ (РАБОТАЕТ ВСЕГДА) --- */
         .fade-in {
             opacity: 0;
             transform: translateY(30px);
@@ -74,7 +97,12 @@
             background: #111; border-radius: 45px;
             box-shadow: inset 0 0 0 2px #333, inset 0 0 0 6px #000, 0 20px 50px rgba(0,0,0,0.8), 0 0 40px rgba(139, 77, 235, 0.3);
             cursor: pointer;
+            /* Плавное появление телефона */
+            transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.8s ease-out;
         }
+        .phone-mockup.fade-in { transform: translateY(50px) scale(0.9); }
+        .phone-mockup.fade-in.visible { transform: translateY(0) scale(1); opacity: 1; }
+
         .phone-mockup::before, .phone-mockup::after { content: ''; position: absolute; background: #222; border-radius: 2px; }
         .phone-mockup::before { width: 3px; height: 25px; left: -5px; top: 80px; }
         .phone-mockup::after { width: 3px; height: 40px; right: -5px; top: 100px; }
@@ -153,9 +181,37 @@
         .instruction ol { padding-left: 20px; color: #9A8FB5; }
         .instruction li { margin-bottom: 10px; }
         .instruction span { color: #8B4DEB; font-weight: bold; }
+        
+        /* --- ЖИВАЯ КНОПКА СКАЧИВАНИЯ --- */
         .download-section { text-align: center; margin-top: 30px; margin-bottom: 20px; }
-        .btn-download { display: inline-block; background: #8B4DEB; color: white; padding: 18px 50px; font-size: 1.4rem; font-weight: bold; border-radius: 50px; text-decoration: none; box-shadow: 0 0 20px rgba(139, 77, 235, 0.6); transition: transform 0.2s, box-shadow 0.2s; }
-        .btn-download:hover { transform: scale(1.05); box-shadow: 0 0 40px rgba(139, 77, 235, 1); }
+        .btn-download { 
+            display: inline-block; 
+            background: #8B4DEB; 
+            color: white; 
+            padding: 18px 50px; 
+            font-size: 1.4rem; 
+            font-weight: bold; 
+            border-radius: 50px; 
+            text-decoration: none; 
+            box-shadow: 0 0 20px rgba(139, 77, 235, 0.6); 
+            transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
+            animation: pulseGlow 2.5s infinite alternate;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-download:hover { 
+            transform: scale(1.05); 
+            box-shadow: 0 0 40px rgba(139, 77, 235, 1); 
+            animation: none; /* Отключаем пульсацию при наведении */
+        }
+        .btn-download:active {
+            transform: scale(0.95); /* Эффект нажатия */
+        }
+        
+        @keyframes pulseGlow {
+            0% { box-shadow: 0 0 15px rgba(139, 77, 235, 0.4); }
+            100% { box-shadow: 0 0 35px rgba(139, 77, 235, 0.9); }
+        }
 
         /* БЕЗОПАСНОСТЬ */
         .security-banner { background: rgba(34, 197, 94, 0.1); border: 1px solid #22C55E; border-radius: 15px; padding: 20px; display: flex; align-items: center; gap: 15px; margin: 30px auto 40px auto; max-width: 600px; }
@@ -174,8 +230,22 @@
 
         /* СВЯЗЬ */
         .contact { text-align: center; margin: 40px 0; }
-        .btn-contact { display: inline-block; background: transparent; color: #8B4DEB; padding: 12px 30px; font-size: 1rem; font-weight: bold; border: 2px solid #8B4DEB; border-radius: 50px; text-decoration: none; transition: background 0.3s, color 0.3s; margin: 5px; cursor: pointer; }
+        .btn-contact { 
+            display: inline-block; 
+            background: transparent; 
+            color: #8B4DEB; 
+            padding: 12px 30px; 
+            font-size: 1rem; 
+            font-weight: bold; 
+            border: 2px solid #8B4DEB; 
+            border-radius: 50px; 
+            text-decoration: none; 
+            transition: background 0.3s, color 0.3s, transform 0.15s; 
+            margin: 5px; 
+            cursor: pointer; 
+        }
         .btn-contact:hover { background: #8B4DEB; color: white; }
+        .btn-contact:active { transform: scale(0.95); } /* Эффект нажатия */
 
         footer { text-align: center; padding: 40px; color: #9A8FB5; border-top: 1px solid #1A1428; margin-top: 60px; }
         .author { color: #8B4DEB; font-weight: bold; }
@@ -457,11 +527,13 @@
             }
         }
 
-        // АНИМАЦИЯ ПОЯВЛЕНИЯ ПРИ СКРОЛЛЕ
+        // АНИМАЦИЯ ПОЯВЛЕНИЯ ПРИ СКРОЛЛЕ (РАБОТАЕТ ВСЕГДА)
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
                     entry.target.classList.add('visible');
+                } else {
+                    entry.target.classList.remove('visible');
                 }
             });
         }, { threshold: 0.1 });
