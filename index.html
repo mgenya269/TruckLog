@@ -246,24 +246,7 @@
         .btn-contact:hover { background: #8B4DEB; color: white; }
         .btn-contact:active { transform: scale(0.95); }
 
-        /* --- ЮРИДИЧЕСКИЕ ССЫЛКИ --- */
-        .legal-links {
-            text-align: center;
-            margin-top: 40px;
-            margin-bottom: 20px;
-            font-size: 0.85rem;
-            color: #9A8FB5;
-        }
-        .legal-links a {
-            color: #8B4DEB;
-            text-decoration: none;
-            cursor: pointer;
-            margin: 0 10px;
-            transition: color 0.3s;
-        }
-        .legal-links a:hover { color: #FFF; text-decoration: underline; }
-
-        /* --- ПОДВАЛ --- */
+        /* --- ЮРИДИЧЕСКИЕ ССЫЛКИ В ПОДВАЛЕ --- */
         footer { 
             text-align: center; 
             padding: 40px; 
@@ -271,6 +254,19 @@
             border-top: 1px solid #1A1428; 
             margin-top: 40px; 
         }
+        .footer-links {
+            margin-bottom: 15px;
+            font-size: 0.85rem;
+        }
+        .footer-links a {
+            color: #8B4DEB;
+            text-decoration: none;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: color 0.3s;
+        }
+        .footer-links a:hover { color: #FFF; text-decoration: underline; }
+        
         .footer-author {
             color: #8B4DEB;
             font-weight: bold;
@@ -499,16 +495,14 @@
             <button class="btn-contact" onclick="shareSite()">Поделиться сайтом</button>
         </div>
 
-        <!-- 11.5 ЮРИДИЧЕСКИЕ ССЫЛКИ -->
-        <div class="legal-links">
-            <a href="privacy.html">Политика конфиденциальности</a> | 
-            <a href="terms.html">Пользовательское соглашение</a>
-        </div>
-
     </div>
 
     <!-- 12. ПОДВАЛ -->
     <footer>
+        <div class="footer-links">
+            <a href="privacy.html">Политика конфиденциальности</a> | 
+            <a href="terms.html">Пользовательское соглашение</a>
+        </div>
         <p class="footer-author">Автор: TruckLog</p>
         <p class="footer-small">Yudzhen</p>
     </footer>
