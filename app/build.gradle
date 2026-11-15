@@ -13,4 +13,15 @@ android {
         versionCode 1
         versionName '1.0'
     }
+
+    buildTypes {
+        release {
+            // Включаем R8: сжатие, обфускация и оптимизация кода
+            minifyEnabled true
+            // Удаляем неиспользуемые ресурсы (картинки, строки)
+            shrinkResources true
+            // Правила по умолчанию + твой файл (создадим ниже)
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
 }
