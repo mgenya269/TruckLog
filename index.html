@@ -227,7 +227,7 @@
         .instruction li { margin-bottom: 10px; }
         .instruction span { color: #8B4DEB; font-weight: bold; }
         
-        /* --- ЖИВАЯ КНОПКА СКАЧИВАНИЯ --- */
+        /* --- КНОПКИ СКАЧИВАНИЯ И ДЕМО --- */
         .download-section { text-align: center; margin-top: 30px; margin-bottom: 20px; }
         .btn-download { 
             display: inline-block; 
@@ -256,6 +256,25 @@
         @keyframes pulseGlow {
             0% { box-shadow: 0 0 15px rgba(139, 77, 235, 0.4); }
             100% { box-shadow: 0 0 35px rgba(139, 77, 235, 0.9); }
+        }
+
+        .btn-demo {
+            display: inline-block;
+            margin-top: 15px;
+            background: transparent;
+            color: #22C55E;
+            padding: 12px 30px;
+            font-size: 1rem;
+            font-weight: bold;
+            border: 2px solid #22C55E;
+            border-radius: 50px;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+        .btn-demo:hover {
+            background: #22C55E;
+            color: white;
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.5);
         }
 
         /* БЕЗОПАСНОСТЬ */
@@ -549,6 +568,9 @@
             </ol>
             <div class="download-section">
                 <a href="https://github.com/mgenya269/TruckLog/releases/download/v1.0/TruckLog.apk" class="btn-download">Скачать TruckLog</a>
+                <!-- КНОПКА ДЕМО -->
+                <br>
+                <a href="demo.html" class="btn-demo" target="_blank">👉 Попробовать в браузере</a>
             </div>
         </div>
 
