@@ -14,11 +14,12 @@
             background: #111; border-radius: 40px; padding: 12px;
             box-shadow: inset 0 0 0 2px #333, inset 0 0 0 6px #000, 0 20px 50px rgba(0,0,0,0.8), 0 0 40px rgba(139, 77, 235, 0.3);
             overflow: hidden;
+            transition: box-shadow 0.3s;
         }
         .screen {
             width: 100%; height: 100%; background: #100D1C;
             border-radius: 30px; overflow: hidden; position: relative;
-            display: flex; flex-direction: column; padding: 20px;
+            display: flex; flex-direction: column; transition: background 0.3s;
         }
         .dynamic-island {
             position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
@@ -26,76 +27,202 @@
         }
         
         /* Контент приложения */
-        .app-header { margin-top: 30px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .app-title { font-size: 1.5rem; font-weight: 900; color: #FFF; }
-        .app-title span { color: #8B4DEB; }
-        .balance-chip { background: #1A1428; color: #8B4DEB; padding: 5px 15px; border-radius: 20px; font-weight: bold; border: 1px solid #8B4DEB; transition: all 0.3s; }
+        .app-content { flex: 1; padding: 20px; padding-top: 45px; overflow-y: auto; display: none; }
+        .app-content.active { display: block; }
         
-        .card { background: #1A1428; border-radius: 20px; padding: 20px; margin-bottom: 15px; position: relative; overflow: hidden; }
+        .app-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .app-title { font-size: 1.5rem; font-weight: 900; color: var(--text-color); }
+        .app-title span { color: var(--accent-color); }
+        .balance-chip { background: #1A1428; color: var(--accent-color); padding: 5px 15px; border-radius: 20px; font-weight: bold; border: 1px solid var(--accent-color); transition: all 0.3s; }
+        
+        .card { background: #1A1428; border-radius: 20px; padding: 20px; margin-bottom: 15px; position: relative; overflow: hidden; transition: background 0.3s; }
         .card-title { font-size: 0.8rem; color: #9A8FB5; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px; }
-        .card-value { font-size: 2.5rem; font-weight: 900; color: #FFF; line-height: 1; }
-        .card-sub { font-size: 0.9rem; color: #8B4DEB; margin-top: 10px; font-weight: bold; }
+        .card-value { font-size: 2.5rem; font-weight: 900; color: var(--text-color); line-height: 1; }
+        .card-sub { font-size: 0.9rem; color: var(--accent-color); margin-top: 10px; font-weight: bold; }
         
         .mini-cards { display: flex; gap: 10px; margin-bottom: 15px; }
-        .mini-card { flex: 1; background: #1A1428; border-radius: 15px; padding: 15px; }
-        .mini-card .card-value { font-size: 1.5rem; color: #8B4DEB; }
+        .mini-card { flex: 1; background: #1A1428; border-radius: 15px; padding: 15px; transition: background 0.3s; }
+        .mini-card .card-value { font-size: 1.5rem; color: var(--accent-color); }
 
         .timer-card { text-align: center; }
-        .timer-value { font-size: 2rem; font-weight: 900; color: #FFF; font-family: monospace; }
+        .timer-value { font-size: 2rem; font-weight: 900; color: var(--text-color); font-family: monospace; }
         
         .btn-action {
             width: 100%; padding: 18px; border-radius: 15px; border: none;
             font-size: 1.1rem; font-weight: bold; cursor: pointer;
             transition: transform 0.1s, box-shadow 0.2s; margin-bottom: 10px;
         }
-        .btn-primary { background: #8B4DEB; color: white; box-shadow: 0 0 20px rgba(139, 77, 235, 0.4); }
+        .btn-primary { background: var(--accent-color); color: white; box-shadow: 0 0 20px var(--accent-shadow); }
         .btn-primary:active { transform: scale(0.95); }
-        .btn-secondary { background: transparent; color: #8B4DEB; border: 2px solid #8B4DEB; }
-        .btn-secondary:active { background: rgba(139, 77, 235, 0.2); }
+        .btn-secondary { background: transparent; color: var(--accent-color); border: 2px solid var(--accent-color); }
+        .btn-secondary:active { background: var(--accent-shadow); }
+
+        /* Нижняя навигация */
+        .bottom-nav { display: flex; background: #1A1428; border-top: 1px solid #24121A; padding: 10px 0; transition: background 0.3s; }
+        .nav-item { flex: 1; text-align: center; cursor: pointer; color: #9A8FB5; font-size: 0.7rem; transition: color 0.3s; }
+        .nav-item.active { color: var(--accent-color); font-weight: bold; }
+        .nav-icon { display: block; font-size: 1.2rem; margin-bottom: 3px; }
+
+        /* Заголовки для других экранов */
+        .screen-title { font-size: 1.5rem; font-weight: 900; margin-bottom: 20px; color: var(--text-color); }
+        
+        /* Список истории */
+        .history-item { background: #1A1428; padding: 15px; border-radius: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .history-amount { color: #22C55E; font-weight: bold; font-size: 1.1rem; }
+        .history-date { color: #9A8FB5; font-size: 0.8rem; }
+
+        /* Настройки */
+        .setting-row { display: flex; justify-content: space-between; align-items: center; background: #1A1428; padding: 15px; border-radius: 15px; margin-bottom: 10px; }
+        .theme-dots { display: flex; gap: 10px; }
+        .theme-dot { width: 25px; height: 25px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: transform 0.2s; }
+        .theme-dot:hover { transform: scale(1.1); }
+        .theme-dot.active { border-color: #FFF; }
 
         /* Кнопка назад */
         .btn-back { margin-top: 20px; color: #9A8FB5; text-decoration: none; font-size: 1rem; border: 1px solid #24121A; padding: 10px 20px; border-radius: 20px; transition: 0.3s; }
-        .btn-back:hover { color: #FFF; border-color: #8B4DEB; }
+        .btn-back:hover { color: #FFF; border-color: var(--accent-color); }
+
+        /* Переменные для тем */
+        :root {
+            --accent-color: #8B4DEB;
+            --text-color: #FFFFFF;
+            --accent-shadow: rgba(139, 77, 235, 0.4);
+        }
     </style>
 </head>
 <body>
 
-    <div class="phone-mockup">
+    <div class="phone-mockup" id="phone">
         <div class="dynamic-island"></div>
-        <div class="screen">
-            <div class="app-header">
-                <div class="app-title">Truck<span>Log</span></div>
-                <div class="balance-chip" id="topBalance">0 ₽</div>
-            </div>
-
-            <!-- Баланс -->
-            <div class="card">
-                <div class="card-title">ТЕКУЩИЙ БАЛАНС</div>
-                <div class="card-value" id="mainBalance">0 ₽</div>
-                <div class="card-sub" id="goalText">До цели: 5 000 000 ₽</div>
-            </div>
-
-            <!-- Мини-карточки -->
-            <div class="mini-cards">
-                <div class="mini-card">
-                    <div class="card-title">КРУГИ</div>
-                    <div class="card-value" id="tripsCount">0</div>
+        <div class="screen" id="screen">
+            
+            <!-- ЭКРАН 1: ГЛАВНАЯ -->
+            <div class="app-content active" id="content-home">
+                <div class="app-header">
+                    <div class="app-title">Truck<span>Log</span></div>
+                    <div class="balance-chip" id="topBalance">0 ₽</div>
                 </div>
-                <div class="mini-card">
-                    <div class="card-title">ВЫПЛАТА</div>
-                    <div class="card-value">15 000 ₽</div>
+
+                <div class="card">
+                    <div class="card-title">ТЕКУЩИЙ БАЛАНС</div>
+                    <div class="card-value" id="mainBalance">0 ₽</div>
+                    <div class="card-sub" id="goalText">До цели: 5 000 000 ₽</div>
+                </div>
+
+                <div class="mini-cards">
+                    <div class="mini-card">
+                        <div class="card-title">КРУГИ</div>
+                        <div class="card-value" id="tripsCount">0</div>
+                    </div>
+                    <div class="mini-card">
+                        <div class="card-title">ВЫПЛАТА</div>
+                        <div class="card-value">15 000 ₽</div>
+                    </div>
+                </div>
+
+                <div class="card timer-card">
+                    <div class="card-title">ТЕКУЩИЙ РЕЙС</div>
+                    <div class="timer-value" id="timer">00:00:00</div>
+                </div>
+
+                <button class="btn-action btn-primary" id="actionBtn" onclick="toggleShift()">НАЧАТЬ СМЕНУ</button>
+                <button class="btn-action btn-secondary" onclick="finishShift()">ЗАВЕРШИТЬ СМЕНУ</button>
+            </div>
+
+            <!-- ЭКРАН 2: СТАТИСТИКА -->
+            <div class="app-content" id="content-stats">
+                <div class="screen-title">Статистика</div>
+                <div class="card">
+                    <div class="card-title">СЕГОДНЯ</div>
+                    <div class="card-value" style="color: var(--accent-color);">0 ₽</div>
+                    <div class="card-sub" style="color: #9A8FB5;">Кругов: 0</div>
+                </div>
+                <div class="card">
+                    <div class="card-title">ЗА ВСЁ ВРЕМЯ</div>
+                    <div class="card-value" style="color: var(--text-color);">0 ₽</div>
+                    <div class="card-sub" style="color: #9A8FB5;">Всего кругов: 0</div>
+                </div>
+                <div class="card">
+                    <div class="card-title">ГРАФИК 7 ДНЕЙ</div>
+                    <div style="display: flex; align-items: flex-end; gap: 5px; height: 80px; margin-top: 10px;">
+                        <div style="flex: 1; background: var(--accent-color); height: 20%; border-radius: 5px;"></div>
+                        <div style="flex: 1; background: var(--accent-color); height: 50%; border-radius: 5px;"></div>
+                        <div style="flex: 1; background: var(--accent-color); height: 80%; border-radius: 5px;"></div>
+                        <div style="flex: 1; background: var(--accent-color); height: 40%; border-radius: 5px;"></div>
+                        <div style="flex: 1; background: var(--accent-color); height: 90%; border-radius: 5px;"></div>
+                        <div style="flex: 1; background: var(--accent-color); height: 30%; border-radius: 5px;"></div>
+                        <div style="flex: 1; background: var(--accent-color); height: 60%; border-radius: 5px;"></div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Таймер -->
-            <div class="card timer-card">
-                <div class="card-title">ТЕКУЩИЙ РЕЙС</div>
-                <div class="timer-value" id="timer">00:00:00</div>
+            <!-- ЭКРАН 3: ИСТОРИЯ -->
+            <div class="app-content" id="content-history">
+                <div class="screen-title">История</div>
+                <div class="history-item">
+                    <div>
+                        <div style="font-weight: bold; color: var(--text-color);">Круг выполнен</div>
+                        <div class="history-date">Сегодня, 14:30</div>
+                    </div>
+                    <div class="history-amount">+15 000 ₽</div>
+                </div>
+                <div class="history-item">
+                    <div>
+                        <div style="font-weight: bold; color: var(--text-color);">Круг выполнен</div>
+                        <div class="history-date">Сегодня, 14:15</div>
+                    </div>
+                    <div class="history-amount">+15 000 ₽</div>
+                </div>
+                <div class="history-item">
+                    <div>
+                        <div style="font-weight: bold; color: var(--text-color);">Смена начата</div>
+                        <div class="history-date">Сегодня, 14:00</div>
+                    </div>
+                    <div style="color: #9A8FB5; font-size: 0.9rem;">Начало</div>
+                </div>
             </div>
 
-            <!-- Кнопки -->
-            <button class="btn-action btn-primary" id="actionBtn" onclick="toggleShift()">НАЧАТЬ СМЕНУ</button>
-            <button class="btn-action btn-secondary" onclick="finishShift()">ЗАВЕРШИТЬ СМЕНУ</button>
+            <!-- ЭКРАН 4: НАСТРОЙКИ -->
+            <div class="app-content" id="content-settings">
+                <div class="screen-title">Настройки</div>
+                
+                <div class="setting-row">
+                    <div style="color: var(--text-color);">Тема оформления</div>
+                    <div class="theme-dots">
+                        <div class="theme-dot active" style="background: #8B4DEB;" onclick="changeTheme('#8B4DEB', '#FFFFFF', 'rgba(139, 77, 235, 0.4)')"></div>
+                        <div class="theme-dot" style="background: #22C55E;" onclick="changeTheme('#22C55E', '#FFFFFF', 'rgba(34, 197, 94, 0.4)')"></div>
+                        <div class="theme-dot" style="background: #3B82F6;" onclick="changeTheme('#3B82F6', '#FFFFFF', 'rgba(59, 130, 246, 0.4)')"></div>
+                        <div class="theme-dot" style="background: #EF4444;" onclick="changeTheme('#EF4444', '#FFFFFF', 'rgba(239, 68, 68, 0.4)')"></div>
+                    </div>
+                </div>
+
+                <div class="setting-row">
+                    <div style="color: var(--text-color);">Звуки приложения</div>
+                    <div style="color: var(--accent-color); font-weight: bold;">Вкл</div>
+                </div>
+
+                <div class="setting-row">
+                    <div style="color: var(--text-color);">Вибрация</div>
+                    <div style="color: var(--accent-color); font-weight: bold;">Вкл</div>
+                </div>
+            </div>
+
+            <!-- НИЖНЯЯ НАВИГАЦИЯ -->
+            <div class="bottom-nav">
+                <div class="nav-item active" onclick="switchTab('home')">
+                    <span class="nav-icon">⌂</span> Главная
+                </div>
+                <div class="nav-item" onclick="switchTab('stats')">
+                    <span class="nav-icon">▦</span> Стата
+                </div>
+                <div class="nav-item" onclick="switchTab('history')">
+                    <span class="nav-icon">◷</span> История
+                </div>
+                <div class="nav-item" onclick="switchTab('settings')">
+                    <span class="nav-icon">⚙</span> Ещё
+                </div>
+            </div>
+
         </div>
     </div>
 
@@ -127,12 +254,10 @@
             const btn = document.getElementById('actionBtn');
             
             if (!isShiftActive) {
-                // Начинаем смену
                 isShiftActive = true;
                 btn.innerText = 'СДЕЛАТЬ КРУГ  +' + formatMoney(pay);
-                btn.style.background = '#22C55E'; // Зеленая кнопка для круга
+                btn.style.background = '#22C55E';
                 
-                // Запускаем таймер
                 clearInterval(timerInterval);
                 timerInterval = setInterval(() => {
                     seconds++;
@@ -142,12 +267,10 @@
                     document.getElementById('timer').innerText = `${h}:${m}:${s}`;
                 }, 1000);
             } else {
-                // Делаем круг
                 balance += pay;
                 trips++;
                 updateUI();
                 
-                // Визуальный отклик
                 btn.style.transform = 'scale(0.95)';
                 setTimeout(() => btn.style.transform = 'scale(1)', 100);
             }
@@ -159,7 +282,6 @@
                 return;
             }
 
-            // Сбрасываем всё
             isShiftActive = false;
             clearInterval(timerInterval);
             seconds = 0;
@@ -174,9 +296,39 @@
             document.getElementById('timer').innerText = '00:00:00';
             const btn = document.getElementById('actionBtn');
             btn.innerText = 'НАЧАТЬ СМЕНУ';
-            btn.style.background = '#8B4DEB';
+            btn.style.background = 'var(--accent-color)';
 
             alert(`Смена завершена!\nЗаработано: ${formatMoney(earned)}\nКругов: ${doneTrips}`);
+        }
+
+        function switchTab(tab) {
+            // Скрываем все экраны
+            document.querySelectorAll('.app-content').forEach(el => el.classList.remove('active'));
+            // Убираем активный класс с кнопок
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            
+            // Показываем нужный
+            document.getElementById('content-' + tab).classList.add('active');
+            
+            // Подсвечиваем кнопку (находим по индексу)
+            const tabs = ['home', 'stats', 'history', 'settings'];
+            const index = tabs.indexOf(tab);
+            document.querySelectorAll('.nav-item')[index].classList.add('active');
+        }
+
+        function changeTheme(accent, text, shadow) {
+            document.documentElement.style.setProperty('--accent-color', accent);
+            document.documentElement.style.setProperty('--text-color', text);
+            document.documentElement.style.setProperty('--accent-shadow', shadow);
+            
+            // Меняем активную точку
+            document.querySelectorAll('.theme-dot').forEach(el => el.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Меняем цвет кнопки "Начать смену", если она не в режиме круга
+            if (!isShiftActive) {
+                document.getElementById('actionBtn').style.background = accent;
+            }
         }
 
         // Инициализация
