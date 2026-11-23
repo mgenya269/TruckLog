@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TruckLog — Демо</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background-color: #0E0B17; color: #FFFFFF; display: flex; justify-content: center; align-items: center; min-height: 100vh; flex-direction: column; overflow: hidden; }
+        
+        /* Мокап телефона */
+        .phone-mockup {
+            position: relative; width: 320px; height: 650px;
+            background: #111; border-radius: 40px; padding: 12px;
+            box-shadow: inset 0 0 0 2px #333, inset 0 0 0 6px #000, 0 20px 50px rgba(0,0,0,0.8), 0 0 40px rgba(139, 77, 235, 0.3);
+            overflow: hidden;
+        }
+        .screen {
+            width: 100%; height: 100%; background: #100D1C;
+            border-radius: 30px; overflow: hidden; position: relative;
+            display: flex; flex-direction: column; padding: 20px;
+        }
+        .dynamic-island {
+            position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+            width: 90px; height: 25px; background: #000; border-radius: 20px; z-index: 20;
+        }
+        
+        /* Контент приложения */
+        .app-header { margin-top: 30px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .app-title { font-size: 1.5rem; font-weight: 900; color: #FFF; }
+        .app-title span { color: #8B4DEB; }
+        .balance-chip { background: #1A1428; color: #8B4DEB; padding: 5px 15px; border-radius: 20px; font-weight: bold; border: 1px solid #8B4DEB; transition: all 0.3s; }
+        
+        .card { background: #1A1428; border-radius: 20px; padding: 20px; margin-bottom: 15px; position: relative; overflow: hidden; }
+        .card-title { font-size: 0.8rem; color: #9A8FB5; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px; }
+        .card-value { font-size: 2.5rem; font-weight: 900; color: #FFF; line-height: 1; }
+        .card-sub { font-size: 0.9rem; color: #8B4DEB; margin-top: 10px; font-weight: bold; }
+        
+        .mini-cards { display: flex; gap: 10px; margin-bottom: 15px; }
+        .mini-card { flex: 1; background: #1A1428; border-radius: 15px; padding: 15px; }
+        .mini-card .card-value { font-size: 1.5rem; color: #8B4DEB; }
+
+        .timer-card { text-align: center; }
+        .timer-value { font-size: 2rem; font-weight: 900; color: #FFF; font-family: monospace; }
+        
+        .btn-action {
+            width: 100%; padding: 18px; border-radius: 15px; border: none;
+            font-size: 1.1rem; font-weight: bold; cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.2s; margin-bottom: 10px;
+        }
+        .btn-primary { background: #8B4DEB; color: white; box-shadow: 0 0 20px rgba(139, 77, 235, 0.4); }
+        .btn-primary:active { transform: scale(0.95); }
+        .btn-secondary { background: transparent; color: #8B4DEB; border: 2px solid #8B4DEB; }
+        .btn-secondary:active { background: rgba(139, 77, 235, 0.2); }
+
+        /* Кнопка назад */
+        .btn-back { margin-top: 20px; color: #9A8FB5; text-decoration: none; font-size: 1rem; border: 1px solid #24121A; padding: 10px 20px; border-radius: 20px; transition: 0.3s; }
+        .btn-back:hover { color: #FFF; border-color: #8B4DEB; }
+    </style>
+</head>
+<body>
+
+    <div class="phone-mockup">
+        <div class="dynamic-island"></div>
+        <div class="screen">
+            <div class="app-header">
+                <div class="app-title">Truck<span>Log</span></div>
+                <div class="balance-chip" id="topBalance">0 ₽</div>
+            </div>
+
+            <!-- Баланс -->
+            <div class="card">
+                <div class="card-title">ТЕКУЩИЙ БАЛАНС</div>
+                <div class="card-value" id="mainBalance">0 ₽</div>
+                <div class="card-sub" id="goalText">До цели: 5 000 000 ₽</div>
+            </div>
+
+            <!-- Мини-карточки -->
+            <div class="mini-cards">
+                <div class="mini-card">
+                    <div class="card-title">КРУГИ</div>
+                    <div class="card-value" id="tripsCount">0</div>
+                </div>
+                <div class="mini-card">
+                    <div class="card-title">ВЫПЛАТА</div>
+                    <div class="card-value">15 000 ₽</div>
+                </div>
+            </div>
+
+            <!-- Таймер -->
+            <div class="card timer-card">
+                <div class="card-title">ТЕКУЩИЙ РЕЙС</div>
+                <div class="timer-value" id="timer">00:00:00</div>
+            </div>
+
+            <!-- Кнопки -->
+            <button class="btn-action btn-primary" id="actionBtn" onclick="toggleShift()">НАЧАТЬ СМЕНУ</button>
+            <button class="btn-action btn-secondary" onclick="finishShift()">ЗАВЕРШИТЬ СМЕНУ</button>
+        </div>
+    </div>
+
+    <a href="index.html" class="btn-back">← Вернуться на сайт</a>
+
+    <script>
+        let balance = 0;
+        let trips = 0;
+        let isShiftActive = false;
+        let timerInterval;
+        let seconds = 0;
+        const pay = 15000;
+        const goal = 5000000;
+
+        function formatMoney(val) {
+            return val.toLocaleString('ru-RU') + ' ₽';
+        }
+
+        function updateUI() {
+            document.getElementById('topBalance').innerText = formatMoney(balance);
+            document.getElementById('mainBalance').innerText = formatMoney(balance);
+            document.getElementById('tripsCount').innerText = trips;
+            
+            let remain = Math.max(0, goal - balance);
+            document.getElementById('goalText').innerText = 'До цели: ' + formatMoney(remain);
+        }
+
+        function toggleShift() {
+            const btn = document.getElementById('actionBtn');
+            
+            if (!isShiftActive) {
+                // Начинаем смену
+                isShiftActive = true;
+                btn.innerText = 'СДЕЛАТЬ КРУГ  +' + formatMoney(pay);
+                btn.style.background = '#22C55E'; // Зеленая кнопка для круга
+                
+                // Запускаем таймер
+                clearInterval(timerInterval);
+                timerInterval = setInterval(() => {
+                    seconds++;
+                    let h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+                    let m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+                    let s = (seconds % 60).toString().padStart(2, '0');
+                    document.getElementById('timer').innerText = `${h}:${m}:${s}`;
+                }, 1000);
+            } else {
+                // Делаем круг
+                balance += pay;
+                trips++;
+                updateUI();
+                
+                // Визуальный отклик
+                btn.style.transform = 'scale(0.95)';
+                setTimeout(() => btn.style.transform = 'scale(1)', 100);
+            }
+        }
+
+        function finishShift() {
+            if (!isShiftActive && trips === 0) {
+                alert('Сначала начни смену и сделай хотя бы один круг!');
+                return;
+            }
+
+            // Сбрасываем всё
+            isShiftActive = false;
+            clearInterval(timerInterval);
+            seconds = 0;
+            
+            const earned = balance;
+            const doneTrips = trips;
+
+            balance = 0;
+            trips = 0;
+            updateUI();
+            
+            document.getElementById('timer').innerText = '00:00:00';
+            const btn = document.getElementById('actionBtn');
+            btn.innerText = 'НАЧАТЬ СМЕНУ';
+            btn.style.background = '#8B4DEB';
+
+            alert(`Смена завершена!\nЗаработано: ${formatMoney(earned)}\nКругов: ${doneTrips}`);
+        }
+
+        // Инициализация
+        updateUI();
+    </script>
+</body>
+</html>
