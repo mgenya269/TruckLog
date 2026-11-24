@@ -8,78 +8,79 @@
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; -webkit-tap-highlight-color: transparent; }
         body { background-color: #0E0B17; color: #FFFFFF; display: flex; justify-content: center; align-items: center; min-height: 100vh; flex-direction: column; overflow: hidden; }
         
-        /* Мокап телефона */
+        /* Мокап телефона (УВЕЛИЧЕН) */
         .phone-mockup {
-            position: relative; width: 320px; height: 650px;
-            background: #111; border-radius: 40px; padding: 12px;
-            box-shadow: inset 0 0 0 2px #333, inset 0 0 0 6px #000, 0 20px 50px rgba(0,0,0,0.8), 0 0 40px rgba(139, 77, 235, 0.3);
+            position: relative; width: 380px; height: 780px;
+            background: #111; border-radius: 50px; padding: 14px;
+            box-shadow: inset 0 0 0 2px #333, inset 0 0 0 8px #000, 0 25px 60px rgba(0,0,0,0.8), 0 0 50px rgba(139, 77, 235, 0.3);
             overflow: hidden;
             transition: box-shadow 0.3s;
         }
         .screen {
             width: 100%; height: 100%; background: #100D1C;
-            border-radius: 30px; overflow: hidden; position: relative;
+            border-radius: 38px; overflow: hidden; position: relative;
             display: flex; flex-direction: column; transition: background 0.3s;
         }
         .dynamic-island {
-            position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
-            width: 90px; height: 25px; background: #000; border-radius: 20px; z-index: 20;
+            position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+            width: 110px; height: 30px; background: #000; border-radius: 25px; z-index: 20;
         }
         
         /* Контент приложения */
-        .app-content { flex: 1; padding: 20px; padding-top: 45px; overflow-y: auto; display: none; }
+        .app-content { flex: 1; padding: 24px; padding-top: 55px; overflow-y: auto; display: none; }
         .app-content.active { display: block; }
         
-        .app-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .app-title { font-size: 1.5rem; font-weight: 900; color: var(--text-color); }
+        .app-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        .app-title { font-size: 1.8rem; font-weight: 900; color: var(--text-color); }
         .app-title span { color: var(--accent-color); }
-        .balance-chip { background: #1A1428; color: var(--accent-color); padding: 5px 15px; border-radius: 20px; font-weight: bold; border: 1px solid var(--accent-color); transition: all 0.3s; }
+        .balance-chip { background: #1A1428; color: var(--accent-color); padding: 6px 18px; border-radius: 25px; font-weight: bold; font-size: 0.9rem; border: 1px solid var(--accent-color); transition: all 0.3s; }
         
-        .card { background: #1A1428; border-radius: 20px; padding: 20px; margin-bottom: 15px; position: relative; overflow: hidden; transition: background 0.3s; }
-        .card-title { font-size: 0.8rem; color: #9A8FB5; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px; }
-        .card-value { font-size: 2.5rem; font-weight: 900; color: var(--text-color); line-height: 1; }
-        .card-sub { font-size: 0.9rem; color: var(--accent-color); margin-top: 10px; font-weight: bold; }
+        .card { background: #1A1428; border-radius: 24px; padding: 24px; margin-bottom: 18px; position: relative; overflow: hidden; transition: background 0.3s; }
+        .card-title { font-size: 0.9rem; color: #9A8FB5; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; }
+        .card-value { font-size: 3rem; font-weight: 900; color: var(--text-color); line-height: 1; }
+        .card-sub { font-size: 1rem; color: var(--accent-color); margin-top: 12px; font-weight: bold; }
         
-        .mini-cards { display: flex; gap: 10px; margin-bottom: 15px; }
-        .mini-card { flex: 1; background: #1A1428; border-radius: 15px; padding: 15px; transition: background 0.3s; }
-        .mini-card .card-value { font-size: 1.5rem; color: var(--accent-color); }
+        .mini-cards { display: flex; gap: 12px; margin-bottom: 18px; }
+        .mini-card { flex: 1; background: #1A1428; border-radius: 18px; padding: 18px; transition: background 0.3s; }
+        .mini-card .card-title { font-size: 0.8rem; }
+        .mini-card .card-value { font-size: 1.8rem; color: var(--accent-color); }
 
         .timer-card { text-align: center; }
-        .timer-value { font-size: 2rem; font-weight: 900; color: var(--text-color); font-family: monospace; }
+        .timer-value { font-size: 2.4rem; font-weight: 900; color: var(--text-color); font-family: monospace; }
         
         .btn-action {
-            width: 100%; padding: 18px; border-radius: 15px; border: none;
-            font-size: 1.1rem; font-weight: bold; cursor: pointer;
-            transition: transform 0.1s, box-shadow 0.2s; margin-bottom: 10px;
+            width: 100%; padding: 20px; border-radius: 18px; border: none;
+            font-size: 1.2rem; font-weight: bold; cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.2s; margin-bottom: 12px;
         }
-        .btn-primary { background: var(--accent-color); color: white; box-shadow: 0 0 20px var(--accent-shadow); }
+        .btn-primary { background: var(--accent-color); color: white; box-shadow: 0 0 25px var(--accent-shadow); }
         .btn-primary:active { transform: scale(0.95); }
         .btn-secondary { background: transparent; color: var(--accent-color); border: 2px solid var(--accent-color); }
         .btn-secondary:active { background: var(--accent-shadow); }
 
         /* Нижняя навигация */
-        .bottom-nav { display: flex; background: #1A1428; border-top: 1px solid #24121A; padding: 10px 0; transition: background 0.3s; }
-        .nav-item { flex: 1; text-align: center; cursor: pointer; color: #9A8FB5; font-size: 0.7rem; transition: color 0.3s; }
+        .bottom-nav { display: flex; background: #1A1428; border-top: 1px solid #24121A; padding: 14px 0; transition: background 0.3s; }
+        .nav-item { flex: 1; text-align: center; cursor: pointer; color: #9A8FB5; font-size: 0.8rem; transition: color 0.3s; }
         .nav-item.active { color: var(--accent-color); font-weight: bold; }
-        .nav-icon { display: block; font-size: 1.2rem; margin-bottom: 3px; }
+        .nav-icon { display: block; font-size: 1.4rem; margin-bottom: 4px; }
 
         /* Заголовки для других экранов */
-        .screen-title { font-size: 1.5rem; font-weight: 900; margin-bottom: 20px; color: var(--text-color); }
+        .screen-title { font-size: 1.8rem; font-weight: 900; margin-bottom: 24px; color: var(--text-color); }
         
         /* Список истории */
-        .history-item { background: #1A1428; padding: 15px; border-radius: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-        .history-amount { color: #22C55E; font-weight: bold; font-size: 1.1rem; }
-        .history-date { color: #9A8FB5; font-size: 0.8rem; }
+        .history-item { background: #1A1428; padding: 18px; border-radius: 18px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+        .history-amount { color: #22C55E; font-weight: bold; font-size: 1.2rem; }
+        .history-date { color: #9A8FB5; font-size: 0.9rem; }
 
         /* Настройки */
-        .setting-row { display: flex; justify-content: space-between; align-items: center; background: #1A1428; padding: 15px; border-radius: 15px; margin-bottom: 10px; }
-        .theme-dots { display: flex; gap: 10px; }
-        .theme-dot { width: 25px; height: 25px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: transform 0.2s; }
+        .setting-row { display: flex; justify-content: space-between; align-items: center; background: #1A1428; padding: 18px; border-radius: 18px; margin-bottom: 12px; font-size: 1.1rem; }
+        .theme-dots { display: flex; gap: 12px; }
+        .theme-dot { width: 30px; height: 30px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: transform 0.2s; }
         .theme-dot:hover { transform: scale(1.1); }
         .theme-dot.active { border-color: #FFF; }
 
         /* Кнопка назад */
-        .btn-back { margin-top: 20px; color: #9A8FB5; text-decoration: none; font-size: 1rem; border: 1px solid #24121A; padding: 10px 20px; border-radius: 20px; transition: 0.3s; }
+        .btn-back { margin-top: 25px; color: #9A8FB5; text-decoration: none; font-size: 1.1rem; border: 1px solid #24121A; padding: 12px 25px; border-radius: 25px; transition: 0.3s; }
         .btn-back:hover { color: #FFF; border-color: var(--accent-color); }
 
         /* Переменные для тем */
@@ -144,14 +145,14 @@
                 </div>
                 <div class="card">
                     <div class="card-title">ГРАФИК 7 ДНЕЙ</div>
-                    <div style="display: flex; align-items: flex-end; gap: 5px; height: 80px; margin-top: 10px;">
-                        <div style="flex: 1; background: var(--accent-color); height: 20%; border-radius: 5px;"></div>
-                        <div style="flex: 1; background: var(--accent-color); height: 50%; border-radius: 5px;"></div>
-                        <div style="flex: 1; background: var(--accent-color); height: 80%; border-radius: 5px;"></div>
-                        <div style="flex: 1; background: var(--accent-color); height: 40%; border-radius: 5px;"></div>
-                        <div style="flex: 1; background: var(--accent-color); height: 90%; border-radius: 5px;"></div>
-                        <div style="flex: 1; background: var(--accent-color); height: 30%; border-radius: 5px;"></div>
-                        <div style="flex: 1; background: var(--accent-color); height: 60%; border-radius: 5px;"></div>
+                    <div style="display: flex; align-items: flex-end; gap: 8px; height: 100px; margin-top: 15px;">
+                        <div style="flex: 1; background: var(--accent-color); height: 20%; border-radius: 6px;"></div>
+                        <div style="flex: 1; background: var(--accent-color); height: 50%; border-radius: 6px;"></div>
+                        <div style="flex: 1; background: var(--accent-color); height: 80%; border-radius: 6px;"></div>
+                        <div style="flex: 1; background: var(--accent-color); height: 40%; border-radius: 6px;"></div>
+                        <div style="flex: 1; background: var(--accent-color); height: 90%; border-radius: 6px;"></div>
+                        <div style="flex: 1; background: var(--accent-color); height: 30%; border-radius: 6px;"></div>
+                        <div style="flex: 1; background: var(--accent-color); height: 60%; border-radius: 6px;"></div>
                     </div>
                 </div>
             </div>
@@ -178,7 +179,7 @@
                         <div style="font-weight: bold; color: var(--text-color);">Смена начата</div>
                         <div class="history-date">Сегодня, 14:00</div>
                     </div>
-                    <div style="color: #9A8FB5; font-size: 0.9rem;">Начало</div>
+                    <div style="color: #9A8FB5; font-size: 1rem;">Начало</div>
                 </div>
             </div>
 
@@ -189,10 +190,10 @@
                 <div class="setting-row">
                     <div style="color: var(--text-color);">Тема оформления</div>
                     <div class="theme-dots">
-                        <div class="theme-dot active" style="background: #8B4DEB;" onclick="changeTheme('#8B4DEB', '#FFFFFF', 'rgba(139, 77, 235, 0.4)')"></div>
-                        <div class="theme-dot" style="background: #22C55E;" onclick="changeTheme('#22C55E', '#FFFFFF', 'rgba(34, 197, 94, 0.4)')"></div>
-                        <div class="theme-dot" style="background: #3B82F6;" onclick="changeTheme('#3B82F6', '#FFFFFF', 'rgba(59, 130, 246, 0.4)')"></div>
-                        <div class="theme-dot" style="background: #EF4444;" onclick="changeTheme('#EF4444', '#FFFFFF', 'rgba(239, 68, 68, 0.4)')"></div>
+                        <div class="theme-dot active" style="background: #8B4DEB;" onclick="changeTheme('#8B4DEB', '#FFFFFF', 'rgba(139, 77, 235, 0.4)', this)"></div>
+                        <div class="theme-dot" style="background: #22C55E;" onclick="changeTheme('#22C55E', '#FFFFFF', 'rgba(34, 197, 94, 0.4)', this)"></div>
+                        <div class="theme-dot" style="background: #3B82F6;" onclick="changeTheme('#3B82F6', '#FFFFFF', 'rgba(59, 130, 246, 0.4)', this)"></div>
+                        <div class="theme-dot" style="background: #EF4444;" onclick="changeTheme('#EF4444', '#FFFFFF', 'rgba(239, 68, 68, 0.4)', this)"></div>
                     </div>
                 </div>
 
@@ -302,30 +303,24 @@
         }
 
         function switchTab(tab) {
-            // Скрываем все экраны
             document.querySelectorAll('.app-content').forEach(el => el.classList.remove('active'));
-            // Убираем активный класс с кнопок
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
             
-            // Показываем нужный
             document.getElementById('content-' + tab).classList.add('active');
             
-            // Подсвечиваем кнопку (находим по индексу)
             const tabs = ['home', 'stats', 'history', 'settings'];
             const index = tabs.indexOf(tab);
             document.querySelectorAll('.nav-item')[index].classList.add('active');
         }
 
-        function changeTheme(accent, text, shadow) {
+        function changeTheme(accent, text, shadow, element) {
             document.documentElement.style.setProperty('--accent-color', accent);
             document.documentElement.style.setProperty('--text-color', text);
             document.documentElement.style.setProperty('--accent-shadow', shadow);
             
-            // Меняем активную точку
             document.querySelectorAll('.theme-dot').forEach(el => el.classList.remove('active'));
-            event.target.classList.add('active');
+            if (element) element.classList.add('active');
             
-            // Меняем цвет кнопки "Начать смену", если она не в режиме круга
             if (!isShiftActive) {
                 document.getElementById('actionBtn').style.background = accent;
             }
